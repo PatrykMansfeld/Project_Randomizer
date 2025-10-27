@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pair Randomizer App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Pair Randomizer</h1>
+            <p>Create pairs and randomize letters - Turn-based rolling system</p>
+        </header>
+        
+        <main>
+            <div class="randomizer-section">
+                <h2>Setup Names</h2>
+                <textarea id="nameList" placeholder="Enter names separated by commas or new lines (e.g., John, Mary, Alex)"></textarea>
+                <button id="loadNames">Load Names</button>
+                <div id="nameDisplay" class="name-display"></div>
+            </div>
+
+            <div class="randomizer-section">
+                <h2>Restricted Pairs (Optional)</h2>
+                <div class="restrictions-info">
+                    <p>Add pairs that should NOT be matched together:</p>
+                </div>
+                <div class="restriction-controls">
+                    <select id="person1Select">
+                        <option value="">Select Person 1</option>
+                    </select>
+                    <span>cannot be paired with</span>
+                    <select id="person2Select">
+                        <option value="">Select Person 2</option>
+                    </select>
+                    <button id="addRestriction">Add Restriction</button>
+                </div>
+                <div id="restrictionsList" class="restrictions-list"></div>
+            </div>
+
+            <div class="randomizer-section">
+                <h2>Turn-Based Rolling</h2>
+                <div id="gameStatus" class="game-status">
+                    Load names to start the game
+                </div>
+                <div id="currentTurn" class="current-turn"></div>
+                <button id="beginRolling" class="roll-btn" disabled>Begin Rolling</button>
+                <div id="progressTracker" class="progress-tracker"></div>
+            </div>
+
+            <div class="randomizer-section">
+                <h2>Final Results</h2>
+                <div id="pairResults" class="pair-results">
+                    Complete all turns to see final pairs
+                </div>
+                <button id="downloadResults" class="download-btn" disabled>Download Results (TXT)</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Rolling Modal -->
+    <div id="rollingModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalPlayerName">Player's Turn</h2>
+                <div id="modalTurnInfo" class="turn-info"></div>
+            </div>
+            <div class="modal-body">
+                <div id="modalInstructions" class="instructions">
+                    Click "Roll Letter" to get your letter
+                </div>
+                <button id="modalRollBtn" class="modal-roll-btn">Roll Letter</button>
+                <div id="modalResult" class="modal-result"></div>
+                <button id="modalNextBtn" class="modal-next-btn" disabled>Next Player</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
