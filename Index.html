@@ -14,33 +14,36 @@
         </header>
         
         <main>
+            <!-- Setup Names -->
             <div class="randomizer-section">
-                <h2>Setup Names</h2>
-                <textarea id="nameList" placeholder="Enter names separated by commas or new lines (e.g., John, Mary, Alex)"></textarea>
+                <h2>Names</h2>
+                <textarea id="nameList" placeholder="Enter names separated by commas or write them in new lines"></textarea>
                 <button id="loadNames">Load Names</button>
                 <div id="nameDisplay" class="name-display"></div>
             </div>
 
+            <!-- Restricted Pairs -->
             <div class="randomizer-section">
-                <h2>Restricted Pairs (Optional)</h2>
+                <h2>Restricted Pairs</h2>
                 <div class="restrictions-info">
                     <p>Add pairs that should NOT be matched together:</p>
                 </div>
                 <div class="restriction-controls">
                     <select id="person1Select">
-                        <option value="">Select Person 1</option>
+                        <option value=""></option>
                     </select>
                     <span>cannot be paired with</span>
                     <select id="person2Select">
-                        <option value="">Select Person 2</option>
+                        <option value=""></option>
                     </select>
                     <button id="addRestriction">Add Restriction</button>
                 </div>
                 <div id="restrictionsList" class="restrictions-list"></div>
             </div>
 
+            <!-- Turn-Based Rolling -->
             <div class="randomizer-section">
-                <h2>Turn-Based Rolling</h2>
+                <h2>Rolling</h2>
                 <div id="gameStatus" class="game-status">
                     Load names to start the game
                 </div>
@@ -49,6 +52,7 @@
                 <div id="progressTracker" class="progress-tracker"></div>
             </div>
 
+            <!-- Final Results -->
             <div class="randomizer-section">
                 <h2>Final Results</h2>
                 <div id="pairResults" class="pair-results">
@@ -56,6 +60,7 @@
                 </div>
                 <button id="downloadResults" class="download-btn" disabled>Download Results (TXT)</button>
             </div>
+            
         </main>
     </div>
 

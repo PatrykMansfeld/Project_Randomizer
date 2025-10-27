@@ -1,4 +1,4 @@
-// DOM Elements
+// Elementy DOM
 const nameListTextarea = document.getElementById('nameList');
 const loadNamesBtn = document.getElementById('loadNames');
 const nameDisplay = document.getElementById('nameDisplay');
@@ -13,7 +13,7 @@ const progressTracker = document.getElementById('progressTracker');
 const pairResults = document.getElementById('pairResults');
 const downloadResultsBtn = document.getElementById('downloadResults');
 
-// Modal elements
+// Okno modalne
 const rollingModal = document.getElementById('rollingModal');
 const modalPlayerName = document.getElementById('modalPlayerName');
 const modalTurnInfo = document.getElementById('modalTurnInfo');
@@ -22,7 +22,7 @@ const modalRollBtn = document.getElementById('modalRollBtn');
 const modalResult = document.getElementById('modalResult');
 const modalNextBtn = document.getElementById('modalNextBtn');
 
-// Game State
+// Zmienne gry
 let names = [];
 let restrictions = [];
 let currentTurnIndex = 0;
@@ -30,7 +30,7 @@ let playerResults = [];
 let gameInProgress = false;
 let finalPairs = [];
 
-// Utility Functions
+// Przetwórz tekst na listę nazw
 function parseNames(text) {
     if (!text.trim()) return [];
     return text.split(/[,\n]/)
@@ -38,13 +38,12 @@ function parseNames(text) {
                .filter(name => name.length > 0);
 }
 
+// Losuj nieużytą literę
 function getRandomLetter() {
-    // Get letters that haven't been used yet
     const allLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const usedLetters = playerResults.map(r => r.letter);
     const availableLetters = allLetters.split('').filter(letter => !usedLetters.includes(letter));
     
-    // If no letters available, something went wrong
     if (availableLetters.length === 0) {
         console.error('No more letters available!');
         return allLetters[Math.floor(Math.random() * allLetters.length)];
@@ -53,12 +52,11 @@ function getRandomLetter() {
     return availableLetters[Math.floor(Math.random() * availableLetters.length)];
 }
 
+// Aktualizuj listy wyboru
 function updateSelectOptions() {
-    // Clear existing options
     person1Select.innerHTML = '<option value="">Select Person 1</option>';
     person2Select.innerHTML = '<option value="">Select Person 2</option>';
     
-    // Add names to both selects
     names.forEach(name => {
         const option1 = document.createElement('option');
         option1.value = name;
@@ -72,6 +70,7 @@ function updateSelectOptions() {
     });
 }
 
+// Pokaż nazwy jako tagi
 function displayNames() {
     nameDisplay.innerHTML = '';
     names.forEach(name => {
@@ -82,10 +81,11 @@ function displayNames() {
     });
 }
 
+// Dodaj ograniczenie
 function addRestriction(person1, person2) {
     if (!person1 || !person2 || person1 === person2) return false;
     
-    // Check if restriction already exists
+    // Sprawdź czy już istnieje
     const exists = restrictions.some(r => 
         (r.person1 === person1 && r.person2 === person2) ||
         (r.person1 === person2 && r.person2 === person1)
@@ -97,6 +97,7 @@ function addRestriction(person1, person2) {
     return true;
 }
 
+// Pokaż listę ograniczeń
 function displayRestrictions() {
     restrictionsList.innerHTML = '';
     restrictions.forEach((restriction, index) => {
@@ -118,11 +119,13 @@ function displayRestrictions() {
     });
 }
 
+// Usuń ograniczenie
 function removeRestriction(index) {
     restrictions.splice(index, 1);
     displayRestrictions();
 }
 
+// Rozpocznij grę
 function startGame() {
     if (names.length < 2) return;
     
@@ -138,6 +141,7 @@ function startGame() {
     updateProgressTracker();
 }
 
+// Aktualizuj status gry
 function updateGameStatus() {
     if (currentTurnIndex < names.length) {
         gameStatus.textContent = `Ready to begin rolling - ${names.length} players total`;
@@ -150,6 +154,7 @@ function updateGameStatus() {
     }
 }
 
+// Aktualizuj pasek postępu
 function updateProgressTracker() {
     progressTracker.innerHTML = '<h3>Progress Tracker:</h3>';
     
@@ -172,6 +177,7 @@ function updateProgressTracker() {
     });
 }
 
+// Pokaż okno modalne
 function showModal() {
     const currentPlayer = names[currentTurnIndex];
     modalPlayerName.textContent = `${currentPlayer}'s Turn`;
@@ -186,25 +192,27 @@ function showModal() {
     rollingModal.classList.add('show');
 }
 
+// Ukryj okno modalne
 function hideModal() {
     rollingModal.classList.remove('show');
 }
 
+// Wylosuj literę w oknie modalnym
 function rollLetterInModal() {
     const letter = getRandomLetter();
     const currentPlayer = names[currentTurnIndex];
     
-    // Store result
+    // Zapisz wynik
     playerResults.push({
         name: currentPlayer,
         letter: letter
     });
     
-    // Find who this player will draw (we need to generate this on the fly for display)
+    // Znajdź cel do wyświetlenia
     const availableTargets = names.filter(name => name !== currentPlayer);
     const targetForDisplay = availableTargets[Math.floor(Math.random() * availableTargets.length)];
     
-    // Show result with animation - include drawer, target, and letter
+    // Pokaż wynik
     modalResult.innerHTML = `
         <div class="result-drawer">${currentPlayer} losuje:</div>
         <div class="result-target">${targetForDisplay}</div>
@@ -212,30 +220,28 @@ function rollLetterInModal() {
     `;
     modalResult.classList.add('show');
     
-    // Update button states
     modalRollBtn.disabled = true;
     modalNextBtn.disabled = false;
     
-    // Update instructions
     modalInstructions.textContent = `${currentPlayer} wylosował ${targetForDisplay} z literą ${letter}! Kliknij "Next Player" aby kontynuować.`;
 }
 
+// Przejdź do następnego gracza
 function nextPlayer() {
     currentTurnIndex++;
     hideModal();
     updateProgressTracker();
     
     if (currentTurnIndex < names.length) {
-        // Continue to next player
         setTimeout(() => {
             showModal();
         }, 500);
     } else {    
-        // All players done
         updateGameStatus();
     }
 }
 
+// Sprawdź czy para jest ograniczona
 function isRestrictedPair(name1, name2) {
     return restrictions.some(r => 
         (r.person1 === name1 && r.person2 === name2) ||
@@ -243,17 +249,16 @@ function isRestrictedPair(name1, name2) {
     );
 }
 
+// Wygeneruj pary automatycznie
 function generatePairsAutomatically() {
     if (playerResults.length !== names.length) return;
     
-    // New system: Each person must be drawn and must draw someone
-    // This means each person appears exactly twice in the system
-    
+    // Każda osoba musi kogoś wylosować i być wylosowana
     const assignments = [];
-    const availableTargets = [...names]; // People who can still be assigned as targets
-    const peopleWhoNeedToAssign = [...names]; // People who still need to draw someone
+    const availableTargets = [...names];
+    const peopleWhoNeedToAssign = [...names];
     
-    // Shuffle both arrays for randomness
+    // Przetasuj dla losowości
     for (let i = availableTargets.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [availableTargets[i], availableTargets[j]] = [availableTargets[j], availableTargets[i]];
@@ -264,16 +269,15 @@ function generatePairsAutomatically() {
         [peopleWhoNeedToAssign[i], peopleWhoNeedToAssign[j]] = [peopleWhoNeedToAssign[j], peopleWhoNeedToAssign[i]];
     }
     
-    // Assign each person to draw someone else
+    // Przypisz każdej osobie cel
     peopleWhoNeedToAssign.forEach(drawer => {
         let assigned = false;
         
-        // Try to find a valid target (not themselves, not restricted)
+        // Znajdź prawidłowy cel
         for (let i = 0; i < availableTargets.length; i++) {
             const target = availableTargets[i];
             
             if (target !== drawer && !isRestrictedPair(drawer, target)) {
-                // Get the drawer's letter
                 const drawerResult = playerResults.find(r => r.name === drawer);
                 
                 assignments.push({
@@ -282,14 +286,13 @@ function generatePairsAutomatically() {
                     letter: drawerResult.letter
                 });
                 
-                // Remove target from available list
                 availableTargets.splice(i, 1);
                 assigned = true;
                 break;
             }
         }
         
-        // If no valid target found due to restrictions, assign to first available
+        // Jeśli nie znaleziono, przypisz pierwszy dostępny
         if (!assigned && availableTargets.length > 0) {
             const target = availableTargets.find(t => t !== drawer) || availableTargets[0];
             const drawerResult = playerResults.find(r => r.name === drawer);
@@ -312,6 +315,7 @@ function generatePairsAutomatically() {
     downloadResultsBtn.disabled = false;
 }
 
+// Pokaż przydziały
 function displayAssignments(assignments) {
     pairResults.innerHTML = '<h3>Wylosowane Pary (Każda osoba losuje kogoś):</h3>';
     
@@ -338,26 +342,14 @@ function displayAssignments(assignments) {
     });
 }
 
+// Pobierz plik TXT
 function downloadTxtFile() {
     if (finalPairs.length === 0) return;
     
-    let content = "RANDOMIZER WYNIKÓW - NOWY SYSTEM\n";
+    let content = "RANDOMIZER\n";
     content += "=================================\n\n";
     content += `Wygenerowano: ${new Date().toLocaleString()}\n`;
     content += `Liczba uczestników: ${names.length}\n`;
-    content += `Liczba przydziałów: ${finalPairs.length}\n\n`;
-    
-    content += "SYSTEM: Każda osoba losuje kogoś i sama jest wylosowana\n";
-    content += "Każda osoba pojawia się dokładnie 2 razy w systemie\n";
-    content += "Żadna litera nie może się powtórzyć\n\n";
-    
-    if (restrictions.length > 0) {
-        content += "ZASTOSOWANE OGRANICZENIA:\n";
-        restrictions.forEach(r => {
-            content += `- ${r.person1} ↔ ${r.person2}\n`;
-        });
-        content += "\n";
-    }
     
     content += "PRZYDZIAŁY (KTO → KOGO WYLOSOWAŁ):\n";
     content += "==================================\n";
@@ -365,17 +357,6 @@ function downloadTxtFile() {
     finalPairs.forEach((assignment) => {
         content += `${assignment.drawer} → ${assignment.target} → ${assignment.letter}\n`;
     });
-    
-    content += "\n";
-    content += "WYLOSOWANE LITERY:\n";
-    content += "==================\n";
-    playerResults.forEach(result => {
-        content += `${result.name}: ${result.letter}\n`;
-    });
-    
-    content += "\n";
-    content += "PODSUMOWANIE - KTO ZOSTAŁ WYLOSOWANY:\n";
-    content += "====================================\n";
     
     const targetCounts = {};
     finalPairs.forEach(assignment => {
@@ -387,7 +368,7 @@ function downloadTxtFile() {
         content += `${name}: wylosowany ${count} ${count === 1 ? 'raz' : 'razy'}\n`;
     });
     
-    // Create and download file
+    // Utwórz i pobierz
     const blob = new Blob([content], { type: 'text/plain' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -399,7 +380,7 @@ function downloadTxtFile() {
     window.URL.revokeObjectURL(url);
 }
 
-// Event Listeners
+// Event listenery
 loadNamesBtn.addEventListener('click', function() {
     const newNames = parseNames(nameListTextarea.value);
     
@@ -409,7 +390,7 @@ loadNamesBtn.addEventListener('click', function() {
     }
     
     names = newNames;
-    restrictions = []; // Clear restrictions when loading new names
+    restrictions = [];
     
     displayNames();
     updateSelectOptions();
@@ -449,16 +430,15 @@ modalRollBtn.addEventListener('click', rollLetterInModal);
 modalNextBtn.addEventListener('click', nextPlayer);
 downloadResultsBtn.addEventListener('click', downloadTxtFile);
 
-// Close modal when clicking outside
+// Kliknięcie poza oknem modalnym
 rollingModal.addEventListener('click', function(e) {
     if (e.target === rollingModal) {
-        // Don't allow closing modal during game
         if (!modalNextBtn.disabled) {
             alert('Please click "Next Player" to continue the game.');
         }
     }
 });
 
-// Initialize
+// Inicjalizacja
 gameStatus.textContent = 'Load names to start the game';
 pairResults.textContent = 'Complete all turns to see final pairs';
