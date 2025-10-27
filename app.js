@@ -138,7 +138,6 @@ function startGame() {
     downloadResultsBtn.disabled = true;
     
     updateGameStatus();
-    updateProgressTracker();
 }
 
 // Aktualizuj status gry
@@ -152,29 +151,6 @@ function updateGameStatus() {
         currentTurn.style.display = 'none';
         generatePairsAutomatically();
     }
-}
-
-// Aktualizuj pasek postępu
-function updateProgressTracker() {
-    progressTracker.innerHTML = '<h3>Progress Tracker:</h3>';
-    
-    names.forEach((name, index) => {
-        const item = document.createElement('div');
-        item.className = 'progress-item';
-        
-        if (index < currentTurnIndex) {
-            item.classList.add('completed');
-            const result = playerResults.find(r => r.name === name);
-            item.innerHTML = `<span>${name}</span><span>Rolled: ${result ? result.letter : '?'}</span>`;
-        } else if (index === currentTurnIndex) {
-            item.classList.add('current');
-            item.innerHTML = `<span>${name}</span><span>Current Turn</span>`;
-        } else {
-            item.innerHTML = `<span>${name}</span><span>Waiting...</span>`;
-        }
-        
-        progressTracker.appendChild(item);
-    });
 }
 
 // Pokaż okno modalne
@@ -230,7 +206,6 @@ function rollLetterInModal() {
 function nextPlayer() {
     currentTurnIndex++;
     hideModal();
-    updateProgressTracker();
     
     if (currentTurnIndex < names.length) {
         setTimeout(() => {
@@ -311,7 +286,6 @@ function generatePairsAutomatically() {
     });
     
     finalPairs = assignments;
-    displayAssignments(assignments);
     downloadResultsBtn.disabled = false;
 }
 
@@ -350,9 +324,7 @@ function downloadTxtFile() {
     content += "=================================\n\n";
     content += `Wygenerowano: ${new Date().toLocaleString()}\n`;
     content += `Liczba uczestników: ${names.length}\n`;
-    
-    content += "PRZYDZIAŁY (KTO → KOGO WYLOSOWAŁ):\n";
-    content += "==================================\n";
+    content += "\n";
     
     finalPairs.forEach((assignment) => {
         content += `${assignment.drawer} → ${assignment.target} → ${assignment.letter}\n`;
@@ -361,11 +333,6 @@ function downloadTxtFile() {
     const targetCounts = {};
     finalPairs.forEach(assignment => {
         targetCounts[assignment.target] = (targetCounts[assignment.target] || 0) + 1;
-    });
-    
-    names.forEach(name => {
-        const count = targetCounts[name] || 0;
-        content += `${name}: wylosowany ${count} ${count === 1 ? 'raz' : 'razy'}\n`;
     });
     
     // Utwórz i pobierz
