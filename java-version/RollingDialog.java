@@ -74,25 +74,34 @@ public class RollingDialog extends JDialog {
         setupLayout();
         setupEventListeners();
         
-        // Finalne ustawienia okna - znacznie zwiększone rozmiary
-        pack();
+        // === TRYB PEŁNOEKRANOWY DLA OKNA MODALNEGO ===
+        // Pobranie rozmiaru ekranu
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         
-        // Przywrócenie zapisanego rozmiaru i pozycji lub ustawienie domyślnych
+        // Przywrócenie zapisanego rozmiaru i pozycji lub ustawienie większego rozmiaru
         if (savedSize != null) {
             setSize(savedSize);
         } else {
-            setSize(900, 800); // Domyślny rozmiar
+            // Pierwsze otwarcie - ustaw na większy rozmiar (90% ekranu)
+            int width = (int)(screenSize.width * 0.9);
+            int height = (int)(screenSize.height * 0.9);
+            setSize(width, height);
         }
         
         if (savedLocation != null) {
             setLocation(savedLocation);
         } else {
-            setLocationRelativeTo(parent);
+            setLocationRelativeTo(null); // Wycentrowanie na ekranie
         }
         
-        setMinimumSize(new Dimension(850, 750)); // Minimalny rozmiar
+        // Zwiększenie minimalnego rozmiaru
+        setMinimumSize(new Dimension(1200, 900));
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
-        setResizable(true); // Zezwolenie na zmianę rozmiaru
+        setResizable(true);
+        
+        // Alternatywnie można użyć prawdziwego trybu pełnoekranowego
+        // setUndecorated(true); // Usuwa ramkę okna
+        // GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().setFullScreenWindow(this);
         
         // Dodanie listenera do zapisywania rozmiaru przy zmianie
         addComponentListener(new java.awt.event.ComponentAdapter() {
@@ -108,6 +117,21 @@ public class RollingDialog extends JDialog {
                 savedLocation = getLocation();
             }
         });
+        
+        // Dodanie skrótu klawiszowego ESC do zamknięcia okna
+        addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyPressed(java.awt.event.KeyEvent e) {
+                if (e.getKeyCode() == java.awt.event.KeyEvent.VK_ESCAPE) {
+                    setVisible(false);
+                    dispose();
+                }
+            }
+        });
+        
+        // Upewnienie się, że okno może otrzymywać zdarzenia klawiatury
+        setFocusable(true);
+        requestFocus();
     }
     
     /**

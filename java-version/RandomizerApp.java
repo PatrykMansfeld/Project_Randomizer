@@ -76,12 +76,21 @@ public class RandomizerApp extends JFrame {
         setupLayout();
         setupEventListeners();
         
-        // Finalne ustawienia okna - zwiększone rozmiary
-        pack();
-        setLocationRelativeTo(null); // Wyśrodkowanie okna
-        setMinimumSize(new Dimension(1200, 900)); // Zwiększony minimalny rozmiar
-        setPreferredSize(new Dimension(1400, 1000)); // Preferowany rozmiar
-        setSize(1400, 1000); // Ustawienie początkowego rozmiaru
+        // === TRYB PEŁNOEKRANOWY ===
+        // Pobranie rozmiaru ekranu
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        
+        // Ustawienie okna na pełny ekran
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+        setSize(screenSize);
+        setLocationRelativeTo(null);
+        
+        // Alternatywnie można użyć prawdziwego trybu pełnoekranowego (bez paska zadań)
+        // setUndecorated(true); // Usuwa ramkę okna
+        // GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().setFullScreenWindow(this);
+        
+        // Ustawienie minimalnego rozmiaru (na wypadek wyjścia z trybu maksymalizacji)
+        setMinimumSize(new Dimension(1200, 900));
         
         // Dodanie ikony okna (emoji jako fallback)
         try {
@@ -314,30 +323,215 @@ public class RandomizerApp extends JFrame {
     }
 
     /**
-     * Tworzy układ interfejsu użytkownika z zakładkami i nowoczesnym stylem
+     * Tworzy układ interfejsu użytkownika z panelem nawigacyjnym po lewej i zawartością po prawej
      */
     private void setupLayout() {
-        JTabbedPane tabbedPane = new JTabbedPane();
-        tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        tabbedPane.setBackground(BACKGROUND_COLOR);
-        tabbedPane.setForeground(TEXT_COLOR);
+        // Główny panel z podziałem na nawigację (lewo) i zawartość (prawo)
+        JSplitPane mainSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        mainSplitPane.setBackground(BACKGROUND_COLOR);
+        mainSplitPane.setBorder(null);
+        mainSplitPane.setDividerSize(0); // Ukrycie dzielnika
+        mainSplitPane.setResizeWeight(0.0); // Panel nawigacyjny ma stałą szerokość
         
-        // === ZAKŁADKA "NAZWY" ===
-        JPanel namesPanel = createCardPanel();
+        // === PANEL NAWIGACYJNY PO LEWEJ STRONIE ===
+        JPanel navigationPanel = createNavigationPanel();
+        navigationPanel.setPreferredSize(new Dimension(200, 1000));
+        navigationPanel.setMinimumSize(new Dimension(200, 600));
         
-        JPanel namesTopPanel = new JPanel(new BorderLayout(0, 20));
-        namesTopPanel.setBackground(CARD_COLOR);
+        // === PANEL ZAWARTOŚCI PO PRAWEJ STRONIE ===
+        JPanel contentPanel = createContentPanel();
+        
+        // Dodanie paneli do split pane
+        mainSplitPane.setLeftComponent(navigationPanel);
+        mainSplitPane.setRightComponent(contentPanel);
+        
+        // Dodanie głównego panelu do okna z padding
+        JPanel mainWrapper = new JPanel(new BorderLayout());
+        mainWrapper.setBackground(BACKGROUND_COLOR);
+        mainWrapper.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        mainWrapper.add(mainSplitPane, BorderLayout.CENTER);
+        
+        add(mainWrapper, BorderLayout.CENTER);
+    }
+    
+    // Zmienna do śledzenia aktualnie wybranej sekcji
+    private String currentSection = "names";
+    
+    /**
+     * Tworzy panel nawigacyjny po lewej stronie
+     */
+    private JPanel createNavigationPanel() {
+        JPanel navPanel = new JPanel();
+        navPanel.setLayout(new BoxLayout(navPanel, BoxLayout.Y_AXIS));
+        navPanel.setBackground(new Color(60, 63, 65)); // Ciemny panel nawigacyjny
+        navPanel.setBorder(BorderFactory.createEmptyBorder(20, 15, 20, 15));
+        
+        // === TYTUŁ NAWIGACJI ===
+        JLabel navTitle = new JLabel("Nawigacja");
+        navTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        navTitle.setForeground(Color.WHITE);
+        navTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        navTitle.setBorder(BorderFactory.createEmptyBorder(0, 10, 20, 0));
+        navPanel.add(navTitle);
+        
+        // === PRZYCISKI NAWIGACYJNE ===
+        String[] sections = {"names", "restrictions", "rolling", "results"};
+        String[] sectionNames = {"Nazwy Uczestników", "Ograniczenia Par", "Losowanie Liter", "Wyniki Finalne"};
+        
+        for (int i = 0; i < sections.length; i++) {
+            JButton navButton = createNavigationButton(sectionNames[i], sections[i]);
+            navButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+            navPanel.add(navButton);
+            navPanel.add(Box.createVerticalStrut(5));
+        }
+        
+        // Wypełnienie pozostałego miejsca
+        navPanel.add(Box.createVerticalGlue());
+        
+        return navPanel;
+    }
+    
+    /**
+     * Tworzy przycisk nawigacyjny
+     */
+    private JButton createNavigationButton(String text, String section) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        button.setForeground(Color.WHITE);
+        button.setBackground(new Color(70, 73, 75));
+        button.setBorder(BorderFactory.createEmptyBorder(12, 15, 12, 15));
+        button.setFocusPainted(false);
+        button.setHorizontalAlignment(SwingConstants.LEFT);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.setMaximumSize(new Dimension(170, 45));
+        button.setPreferredSize(new Dimension(170, 45));
+        
+        // Wyróżnienie aktualnie wybranej sekcji
+        if (section.equals(currentSection)) {
+            button.setBackground(PRIMARY_COLOR);
+            button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        }
+        
+        // Efekt hover
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                if (!section.equals(currentSection)) {
+                    button.setBackground(new Color(80, 83, 85));
+                }
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                if (!section.equals(currentSection)) {
+                    button.setBackground(new Color(70, 73, 75));
+                }
+            }
+        });
+        
+        // Obsługa kliknięcia
+        button.addActionListener(e -> switchToSection(section));
+        
+        return button;
+    }
+    
+    // Panel zawartości i karty sekcji
+    private JPanel contentContainer;
+    private CardLayout contentCardLayout;
+    
+    /**
+     * Tworzy panel zawartości po prawej stronie
+     */
+    private JPanel createContentPanel() {
+        JPanel contentPanel = new JPanel(new BorderLayout());
+        contentPanel.setBackground(BACKGROUND_COLOR);
+        contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
+        
+        // === NAGŁÓWEK ZAWARTOŚCI ===
+        JLabel contentTitle = new JLabel("");
+        contentTitle.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        contentTitle.setForeground(TEXT_COLOR);
+        contentTitle.setBorder(BorderFactory.createEmptyBorder(0, 0, 30, 0));
+        contentPanel.add(contentTitle, BorderLayout.NORTH);
+        
+        // === KONTENER Z KARTAMI SEKCJI ===
+        contentCardLayout = new CardLayout();
+        contentContainer = new JPanel(contentCardLayout);
+        contentContainer.setBackground(BACKGROUND_COLOR);
+        
+        // Dodanie kart dla każdej sekcji
+        contentContainer.add(createNamesCard(), "names");
+        contentContainer.add(createRestrictionsCard(), "restrictions");
+        contentContainer.add(createRollingCard(), "rolling");
+        contentContainer.add(createResultsCard(), "results");
+        
+        contentPanel.add(contentContainer, BorderLayout.CENTER);
+        
+        return contentPanel;
+    }
+    
+    /**
+     * Przełącza na wybraną sekcję
+     */
+    private void switchToSection(String section) {
+        currentSection = section;
+        contentCardLayout.show(contentContainer, section);
+        
+        // Aktualizacja wyglądu przycisków nawigacyjnych
+        updateNavigationButtons();
+    }
+    
+    /**
+     * Aktualizuje wygląd przycisków nawigacyjnych
+     */
+    private void updateNavigationButtons() {
+        // Znajdź panel nawigacyjny i zaktualizuj przyciski
+        Container parent = getContentPane();
+        updateNavigationButtonsRecursive(parent);
+        repaint();
+    }
+    
+    private void updateNavigationButtonsRecursive(Container container) {
+        for (Component comp : container.getComponents()) {
+            if (comp instanceof JButton) {
+                JButton button = (JButton) comp;
+                String buttonText = button.getText();
+                
+                // Sprawdź czy to przycisk nawigacyjny i czy odpowiada aktualnej sekcji
+                boolean isActive = (buttonText.equals("Nazwy Uczestników") && currentSection.equals("names")) ||
+                                 (buttonText.equals("Ograniczenia Par") && currentSection.equals("restrictions")) ||
+                                 (buttonText.equals("Losowanie Liter") && currentSection.equals("rolling")) ||
+                                 (buttonText.equals("Wyniki Finalne") && currentSection.equals("results"));
+                
+                if (isActive) {
+                    button.setBackground(PRIMARY_COLOR);
+                    button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                } else if (button.getBackground().equals(PRIMARY_COLOR)) {
+                    button.setBackground(new Color(70, 73, 75));
+                    button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                }
+            } else if (comp instanceof Container) {
+                updateNavigationButtonsRecursive((Container) comp);
+            }
+        }
+    }
+    
+    /**
+     * Tworzy kartę sekcji "Nazwy"
+     */
+    private JPanel createNamesCard() {
+        JPanel card = createCardPanel();
+        
+        JPanel topPanel = new JPanel(new BorderLayout(0, 20));
+        topPanel.setBackground(CARD_COLOR);
         
         JScrollPane nameAreaScroll = new JScrollPane(nameListArea);
         nameAreaScroll.setBorder(null);
-        namesTopPanel.add(nameAreaScroll, BorderLayout.CENTER);
+        topPanel.add(nameAreaScroll, BorderLayout.CENTER);
         
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         buttonPanel.setBackground(CARD_COLOR);
         buttonPanel.add(loadNamesBtn);
-        namesTopPanel.add(buttonPanel, BorderLayout.SOUTH);
+        topPanel.add(buttonPanel, BorderLayout.SOUTH);
         
-        namesPanel.add(namesTopPanel, BorderLayout.NORTH);
+        card.add(topPanel, BorderLayout.NORTH);
         
         JScrollPane nameDisplayScroll = new JScrollPane(nameDisplayPanel);
         nameDisplayScroll.setBorder(BorderFactory.createTitledBorder(
@@ -346,12 +540,16 @@ public class RandomizerApp extends JFrame {
             0, 0, new Font("Segoe UI", Font.BOLD, 12), SECONDARY_COLOR
         ));
         nameDisplayScroll.setBackground(CARD_COLOR);
-        namesPanel.add(nameDisplayScroll, BorderLayout.CENTER);
+        card.add(nameDisplayScroll, BorderLayout.CENTER);
         
-        tabbedPane.addTab("Nazwy", namesPanel);
-        
-        // === ZAKŁADKA "OGRANICZENIA" ===
-        JPanel restrictionsPanel = createCardPanel();
+        return card;
+    }
+    
+    /**
+     * Tworzy kartę sekcji "Ograniczenia"
+     */
+    private JPanel createRestrictionsCard() {
+        JPanel card = createCardPanel();
         
         JLabel restrictionsTitle = new JLabel("Dodaj pary, które NIE powinny być dopasowane razem:");
         styleLabel(restrictionsTitle, new Font("Segoe UI", Font.BOLD, 14), TEXT_COLOR);
@@ -388,14 +586,18 @@ public class RandomizerApp extends JFrame {
         ));
         restrictionsScroll.setPreferredSize(new Dimension(0, 200));
         
-        restrictionsPanel.add(restrictionsTitle, BorderLayout.NORTH);
-        restrictionsPanel.add(restrictionsControlPanel, BorderLayout.CENTER);
-        restrictionsPanel.add(restrictionsScroll, BorderLayout.SOUTH);
+        card.add(restrictionsTitle, BorderLayout.NORTH);
+        card.add(restrictionsControlPanel, BorderLayout.CENTER);
+        card.add(restrictionsScroll, BorderLayout.SOUTH);
         
-        tabbedPane.addTab("Ograniczenia", restrictionsPanel);
-        
-        // === ZAKŁADKA "LOSOWANIE" ===
-        JPanel rollingPanel = createCardPanel();
+        return card;
+    }
+    
+    /**
+     * Tworzy kartę sekcji "Losowanie"
+     */
+    private JPanel createRollingCard() {
+        JPanel card = createCardPanel();
         
         JPanel statusCard = new JPanel(new BorderLayout(0, 25));
         statusCard.setBackground(CARD_COLOR);
@@ -412,12 +614,16 @@ public class RandomizerApp extends JFrame {
         rollingButtonPanel.add(beginRollingBtn);
         statusCard.add(rollingButtonPanel, BorderLayout.SOUTH);
         
-        rollingPanel.add(statusCard, BorderLayout.CENTER);
+        card.add(statusCard, BorderLayout.CENTER);
         
-        tabbedPane.addTab("Losowanie", rollingPanel);
-        
-        // === ZAKŁADKA "WYNIKI" ===
-        JPanel resultsPanel = createCardPanel();
+        return card;
+    }
+    
+    /**
+     * Tworzy kartę sekcji "Wyniki"
+     */
+    private JPanel createResultsCard() {
+        JPanel card = createCardPanel();
         
         JScrollPane resultsScroll = new JScrollPane(pairResultsPanel);
         resultsScroll.setBorder(BorderFactory.createTitledBorder(
@@ -431,18 +637,10 @@ public class RandomizerApp extends JFrame {
         downloadPanel.setBorder(BorderFactory.createEmptyBorder(25, 0, 0, 0));
         downloadPanel.add(downloadResultsBtn);
         
-        resultsPanel.add(resultsScroll, BorderLayout.CENTER);
-        resultsPanel.add(downloadPanel, BorderLayout.SOUTH);
+        card.add(resultsScroll, BorderLayout.CENTER);
+        card.add(downloadPanel, BorderLayout.SOUTH);
         
-        tabbedPane.addTab("Wyniki", resultsPanel);
-        
-        // Dodanie głównego panelu do okna z padding
-        JPanel mainWrapper = new JPanel(new BorderLayout());
-        mainWrapper.setBackground(BACKGROUND_COLOR);
-        mainWrapper.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
-        mainWrapper.add(tabbedPane, BorderLayout.CENTER);
-        
-        add(mainWrapper, BorderLayout.CENTER);
+        return card;
     }
     
     /**
@@ -819,10 +1017,10 @@ public class RandomizerApp extends JFrame {
                 ));
                 assignmentCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 70));
                 
-                // Dodanie cienia (symulacja przez gradient border)
+                // Dodanie subtelnego cienia
                 assignmentCard.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(0,0,0,10), 1),
+                        BorderFactory.createLineBorder(new Color(0,0,0,20), 1),
                         BorderFactory.createLineBorder(CARD_COLOR, 2)
                     ),
                     BorderFactory.createEmptyBorder(20, 25, 20, 25)
@@ -831,19 +1029,26 @@ public class RandomizerApp extends JFrame {
                 JLabel namesLabel = new JLabel(assignment.drawer + " → " + assignment.target);
                 styleLabel(namesLabel, new Font("Segoe UI", Font.BOLD, 16), TEXT_COLOR);
                 
-                // Stylizowana litera
-                JPanel letterPanel = new JPanel(new BorderLayout());
-                letterPanel.setBackground(ACCENT_COLOR);
+                // === NOWA ELEGANCKA STYLIZACJA LITERY ===
+                JPanel letterPanel = new JPanel();
+                letterPanel.setLayout(new BorderLayout());
+                letterPanel.setPreferredSize(new Dimension(60, 60));
+                
+                // Gradient-like effect z jasnoszarym tłem i niebieskim akcentem
+                letterPanel.setBackground(new Color(240, 248, 255)); // Bardzo jasnoniebieski
                 letterPanel.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(ACCENT_COLOR.darker(), 2),
-                    BorderFactory.createEmptyBorder(8, 8, 8, 8)
+                    BorderFactory.createLineBorder(PRIMARY_COLOR, 2), // Niebieskie obramowanie
+                    BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(220, 235, 255), 1), // Jasnoniebieski inner border
+                        BorderFactory.createEmptyBorder(8, 8, 8, 8)
+                    )
                 ));
-                letterPanel.setPreferredSize(new Dimension(50, 45));
                 
                 JLabel letterLabel = new JLabel(String.valueOf(assignment.letter));
                 letterLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
-                letterLabel.setForeground(Color.WHITE);
+                letterLabel.setForeground(PRIMARY_COLOR); // Niebieska litera zamiast białej
                 letterLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                letterLabel.setVerticalAlignment(SwingConstants.CENTER);
                 letterPanel.add(letterLabel, BorderLayout.CENTER);
                 
                 assignmentCard.add(namesLabel, BorderLayout.CENTER);
