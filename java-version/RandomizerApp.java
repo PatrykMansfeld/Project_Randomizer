@@ -9,12 +9,23 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
+import java.awt.image.BufferedImage;
 
 /**
  * Główna klasa aplikacji Randomizer - aplikacja do losowego przydzielania par
  * z systemem ograniczeń i losowania liter w kolejnych turach
  */
 public class RandomizerApp extends JFrame {
+    // === PALETA KOLORÓW ===
+    private static final Color PRIMARY_COLOR = new Color(52, 152, 219);      // Niebieski
+    private static final Color SECONDARY_COLOR = new Color(46, 204, 113);    // Zielony
+    private static final Color ACCENT_COLOR = new Color(231, 76, 60);        // Czerwony
+    private static final Color WARNING_COLOR = new Color(255, 193, 7);       // Żółty
+    private static final Color BACKGROUND_COLOR = new Color(248, 249, 250);  // Jasny szary
+    private static final Color CARD_COLOR = Color.WHITE;                     // Biały
+    private static final Color TEXT_COLOR = Color.BLACK;                     // Wszystkie teksty czarne
+    private static final Color BORDER_COLOR = new Color(222, 226, 230);      // Jasny szary
+
     // === KOMPONENTY INTERFEJSU UŻYTKOWNIKA ===
     
     // Pole tekstowe do wpisywania nazw uczestników
@@ -52,10 +63,13 @@ public class RandomizerApp extends JFrame {
      * Konstruktor - inicjalizuje główne okno aplikacji
      */
     public RandomizerApp() {
-        // Ustawienia okna
-        setTitle("Pair Randomizer - Java Version");
+        // Ustawienia okna z nowoczesnym stylem
+        setTitle("Pair Randomizer - Modern Edition");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
+        
+        // Ustawienie tła głównego okna
+        getContentPane().setBackground(BACKGROUND_COLOR);
         
         // Inicjalizacja komponentów i układu
         initializeComponents();
@@ -68,121 +82,367 @@ public class RandomizerApp extends JFrame {
         setMinimumSize(new Dimension(1200, 900)); // Zwiększony minimalny rozmiar
         setPreferredSize(new Dimension(1400, 1000)); // Preferowany rozmiar
         setSize(1400, 1000); // Ustawienie początkowego rozmiaru
+        
+        // Dodanie ikony okna (emoji jako fallback)
+        try {
+            setIconImage(createIconImage());
+        } catch (Exception e) {
+            // Ignoruj błędy z ikoną
+        }
     }
     
     /**
-     * Inicjalizuje wszystkie komponenty interfejsu użytkownika
+     * Tworzy prostą ikonę dla aplikacji
+     */
+    private Image createIconImage() {
+        BufferedImage icon = new BufferedImage(32, 32, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2d = icon.createGraphics();
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        
+        // Tło ikony
+        g2d.setColor(PRIMARY_COLOR);
+        g2d.fillRoundRect(0, 0, 32, 32, 8, 8);
+        
+        // Tekst "R" na ikonie
+        g2d.setColor(Color.WHITE);
+        g2d.setFont(new Font("Arial", Font.BOLD, 20));
+        FontMetrics fm = g2d.getFontMetrics();
+        String text = "R";
+        int x = (32 - fm.stringWidth(text)) / 2;
+        int y = (32 + fm.getAscent() - fm.getDescent()) / 2;
+        g2d.drawString(text, x, y);
+        
+        g2d.dispose();
+        return icon;
+    }
+
+    /**
+     * Inicjalizuje wszystkie komponenty interfejsu użytkownika z nowoczesnym stylem
      */
     private void initializeComponents() {
         // === SEKCJA NAZW ===
-        // Pole tekstowe do wprowadzania nazw uczestników
-        nameListArea = new JTextArea(5, 40);
-        nameListArea.setBorder(BorderFactory.createTitledBorder("Wprowadź nazwy oddzielone przecinkami lub w nowych liniach"));
+        nameListArea = new JTextArea(6, 50);
+        styleTextArea(nameListArea);
+        nameListArea.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(PRIMARY_COLOR, 2),
+                "Wprowadź nazwy oddzielone przecinkami lub w nowych liniach",
+                0, 0, new Font("Segoe UI", Font.BOLD, 12), PRIMARY_COLOR
+            ),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
         
-        // Panel do wyświetlania załadowanych nazw
-        nameDisplayPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        nameDisplayPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        nameDisplayPanel.setBackground(CARD_COLOR);
+        nameDisplayPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR, 1),
+            BorderFactory.createEmptyBorder(20, 20, 20, 20)
+        ));
         
-        // Przycisk do załadowania nazw z pola tekstowego
-        loadNamesBtn = new JButton("Załaduj Nazwy");
+        loadNamesBtn = createStyledButton("Załaduj Nazwy", PRIMARY_COLOR, Color.WHITE);
         
         // === SEKCJA OGRANICZEŃ ===
-        // Listy rozwijane do wyboru osób dla ograniczeń
         person1Select = new JComboBox<>();
         person2Select = new JComboBox<>();
+        styleComboBox(person1Select);
+        styleComboBox(person2Select);
         
-        // Przycisk do dodania ograniczenia
-        addRestrictionBtn = new JButton("Dodaj Ograniczenie");
+        addRestrictionBtn = createStyledButton("Dodaj Ograniczenie", SECONDARY_COLOR, Color.WHITE);
         
-        // Model i lista do wyświetlania aktualnych ograniczeń
         restrictionsModel = new DefaultListModel<>();
         restrictionsList = new JList<>(restrictionsModel);
-        restrictionsList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        styleList(restrictionsList);
         
         // === SEKCJA STATUS GRY ===
-        // Etykiety informujące o stanie gry
         gameStatusLabel = new JLabel("Załaduj nazwy aby rozpocząć grę");
-        currentTurnLabel = new JLabel("");
+        styleLabel(gameStatusLabel, new Font("Segoe UI", Font.BOLD, 16), TEXT_COLOR);
         
-        // Przycisk rozpoczynający losowanie
-        beginRollingBtn = new JButton("Rozpocznij Losowanie");
-        beginRollingBtn.setEnabled(false); // Początkowo nieaktywny
+        currentTurnLabel = new JLabel("");
+        styleLabel(currentTurnLabel, new Font("Segoe UI", Font.PLAIN, 14), TEXT_COLOR);
+        
+        beginRollingBtn = createStyledButton("Rozpocznij Losowanie", ACCENT_COLOR, Color.WHITE);
+        beginRollingBtn.setEnabled(false);
         
         // === SEKCJA WYNIKÓW ===
-        // Panel do wyświetlania finalnych wyników
         pairResultsPanel = new JPanel();
         pairResultsPanel.setLayout(new BoxLayout(pairResultsPanel, BoxLayout.Y_AXIS));
+        pairResultsPanel.setBackground(BACKGROUND_COLOR);
+        pairResultsPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         
-        // Przycisk do pobierania wyników do pliku
-        downloadResultsBtn = new JButton("Pobierz Wyniki (TXT)");
-        downloadResultsBtn.setEnabled(false); // Aktywny dopiero po zakończeniu gry
+        downloadResultsBtn = createStyledButton("Pobierz Wyniki (TXT)", SECONDARY_COLOR, Color.WHITE);
+        downloadResultsBtn.setEnabled(false);
     }
     
     /**
-     * Tworzy układ interfejsu użytkownika z zakładkami
+     * Tworzy stylizowany przycisk z efektami hover i lepszą widocznością
+     */
+    private JButton createStyledButton(String text, Color bgColor, Color textColor) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Segoe UI", Font.BOLD, 16)); // Zwiększona czcionka
+        button.setForeground(textColor);
+        button.setBackground(bgColor);
+        button.setBorderPainted(true); // Włączenie obramowania
+        button.setFocusPainted(true); // Włączenie fokusa
+        button.setPreferredSize(new Dimension(250, 55)); // Większy rozmiar
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.setOpaque(true); // Zapewnienie nieprzezroczystości
+        
+        // Wyraźne obramowanie dla lepszej widoczności
+        button.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createRaisedBevelBorder(), // Poprawiona nazwa metody
+            BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.BLACK, 2), // Czarne obramowanie
+                BorderFactory.createEmptyBorder(10, 20, 10, 20) // Padding
+            )
+        ));
+        
+        // Dodanie efektu hover z lepszym kontrastem
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                if (button.isEnabled()) {
+                    button.setBackground(bgColor.brighter());
+                    button.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createRaisedBevelBorder(),
+                        BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(Color.BLUE, 3), // Niebieskie przy hover
+                            BorderFactory.createEmptyBorder(10, 20, 10, 20)
+                        )
+                    ));
+                }
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                if (button.isEnabled()) {
+                    button.setBackground(bgColor);
+                    button.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createRaisedBevelBorder(),
+                        BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(Color.BLACK, 2),
+                            BorderFactory.createEmptyBorder(10, 20, 10, 20)
+                        )
+                    ));
+                }
+            }
+        });
+        
+        // Dodanie efektu kliknięcia
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                if (button.isEnabled()) {
+                    button.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLoweredBevelBorder(), // Poprawiona nazwa metody
+                        BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(Color.RED, 2),
+                            BorderFactory.createEmptyBorder(10, 20, 10, 20)
+                        )
+                    ));
+                }
+            }
+            public void mouseReleased(java.awt.event.MouseEvent evt) {
+                if (button.isEnabled()) {
+                    button.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createRaisedBevelBorder(),
+                        BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(Color.BLACK, 2),
+                            BorderFactory.createEmptyBorder(10, 20, 10, 20)
+                        )
+                    ));
+                }
+            }
+        });
+        
+        return button;
+    }
+    
+    /**
+     * Stylizuje pole tekstowe
+     */
+    private void styleTextArea(JTextArea textArea) {
+        textArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        textArea.setBackground(CARD_COLOR);
+        textArea.setForeground(TEXT_COLOR);
+        textArea.setCaretColor(PRIMARY_COLOR);
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
+        textArea.setMargin(new Insets(10, 10, 10, 10));
+    }
+    
+    /**
+     * Stylizuje listę rozwijalną
+     */
+    private void styleComboBox(JComboBox<String> comboBox) {
+        comboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        comboBox.setBackground(CARD_COLOR);
+        comboBox.setForeground(TEXT_COLOR);
+        comboBox.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR, 1),
+            BorderFactory.createEmptyBorder(8, 12, 8, 12)
+        ));
+        comboBox.setPreferredSize(new Dimension(200, 40));
+    }
+    
+    /**
+     * Stylizuje listę
+     */
+    private void styleList(JList<String> list) {
+        list.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        list.setBackground(CARD_COLOR);
+        list.setForeground(TEXT_COLOR);
+        list.setSelectionBackground(new Color(PRIMARY_COLOR.getRed(), PRIMARY_COLOR.getGreen(), PRIMARY_COLOR.getBlue(), 50));
+        list.setSelectionForeground(PRIMARY_COLOR.darker());
+        list.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
+    }
+    
+    /**
+     * Stylizuje etykietę
+     */
+    private void styleLabel(JLabel label, Font font, Color color) {
+        label.setFont(font);
+        label.setForeground(color);
+    }
+    
+    /**
+     * Tworzy panel z efektem karty
+     */
+    private JPanel createCardPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(CARD_COLOR);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR, 1),
+            BorderFactory.createEmptyBorder(25, 25, 25, 25)
+        ));
+        return panel;
+    }
+
+    /**
+     * Tworzy układ interfejsu użytkownika z zakładkami i nowoczesnym stylem
      */
     private void setupLayout() {
-        // Główny panel z zakładkami
         JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        tabbedPane.setBackground(BACKGROUND_COLOR);
+        tabbedPane.setForeground(TEXT_COLOR);
         
         // === ZAKŁADKA "NAZWY" ===
-        JPanel namesPanel = new JPanel(new BorderLayout());
-        namesPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        JPanel namesPanel = createCardPanel();
         
-        // Górna część - pole tekstowe i przycisk
-        JPanel namesTopPanel = new JPanel(new BorderLayout());
-        namesTopPanel.add(new JScrollPane(nameListArea), BorderLayout.CENTER);
-        namesTopPanel.add(loadNamesBtn, BorderLayout.SOUTH);
+        JPanel namesTopPanel = new JPanel(new BorderLayout(0, 20));
+        namesTopPanel.setBackground(CARD_COLOR);
         
-        // Składanie sekcji nazw
+        JScrollPane nameAreaScroll = new JScrollPane(nameListArea);
+        nameAreaScroll.setBorder(null);
+        namesTopPanel.add(nameAreaScroll, BorderLayout.CENTER);
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        buttonPanel.setBackground(CARD_COLOR);
+        buttonPanel.add(loadNamesBtn);
+        namesTopPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
         namesPanel.add(namesTopPanel, BorderLayout.NORTH);
-        namesPanel.add(new JScrollPane(nameDisplayPanel), BorderLayout.CENTER);
+        
+        JScrollPane nameDisplayScroll = new JScrollPane(nameDisplayPanel);
+        nameDisplayScroll.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(SECONDARY_COLOR, 2),
+            "Załadowani uczestnicy",
+            0, 0, new Font("Segoe UI", Font.BOLD, 12), SECONDARY_COLOR
+        ));
+        nameDisplayScroll.setBackground(CARD_COLOR);
+        namesPanel.add(nameDisplayScroll, BorderLayout.CENTER);
         
         tabbedPane.addTab("Nazwy", namesPanel);
         
         // === ZAKŁADKA "OGRANICZENIA" ===
-        JPanel restrictionsPanel = new JPanel(new BorderLayout());
-        restrictionsPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        JPanel restrictionsPanel = createCardPanel();
         
-        // Panel kontrolny do dodawania ograniczeń
-        JPanel restrictionsControlPanel = new JPanel(new FlowLayout());
-        restrictionsControlPanel.add(new JLabel("Osoba 1:"));
+        JLabel restrictionsTitle = new JLabel("Dodaj pary, które NIE powinny być dopasowane razem:");
+        styleLabel(restrictionsTitle, new Font("Segoe UI", Font.BOLD, 14), TEXT_COLOR);
+        restrictionsTitle.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
+        
+        JPanel restrictionsControlPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 15));
+        restrictionsControlPanel.setBackground(CARD_COLOR);
+        restrictionsControlPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(WARNING_COLOR, 2),
+            BorderFactory.createEmptyBorder(25, 25, 25, 25)
+        ));
+        
+        JLabel person1Label = new JLabel("Osoba 1:");
+        styleLabel(person1Label, new Font("Segoe UI", Font.PLAIN, 13), TEXT_COLOR);
+        restrictionsControlPanel.add(person1Label);
         restrictionsControlPanel.add(person1Select);
-        restrictionsControlPanel.add(new JLabel("nie może być sparowana z"));
+        
+        JLabel arrowLabel = new JLabel("X");
+        arrowLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        arrowLabel.setForeground(ACCENT_COLOR);
+        restrictionsControlPanel.add(arrowLabel);
+        
+        JLabel person2Label = new JLabel("Osoba 2:");
+        styleLabel(person2Label, new Font("Segoe UI", Font.PLAIN, 13), TEXT_COLOR);
+        restrictionsControlPanel.add(person2Label);
         restrictionsControlPanel.add(person2Select);
         restrictionsControlPanel.add(addRestrictionBtn);
         
-        // Składanie sekcji ograniczeń
-        restrictionsPanel.add(new JLabel("Dodaj pary, które NIE powinny być dopasowane razem:"), BorderLayout.NORTH);
+        JScrollPane restrictionsScroll = new JScrollPane(restrictionsList);
+        restrictionsScroll.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(ACCENT_COLOR, 2),
+            "Aktualne ograniczenia (Kliknij dwukrotnie aby usunąć)",
+            0, 0, new Font("Segoe UI", Font.BOLD, 12), ACCENT_COLOR
+        ));
+        restrictionsScroll.setPreferredSize(new Dimension(0, 200));
+        
+        restrictionsPanel.add(restrictionsTitle, BorderLayout.NORTH);
         restrictionsPanel.add(restrictionsControlPanel, BorderLayout.CENTER);
-        restrictionsPanel.add(new JScrollPane(restrictionsList), BorderLayout.SOUTH);
+        restrictionsPanel.add(restrictionsScroll, BorderLayout.SOUTH);
         
         tabbedPane.addTab("Ograniczenia", restrictionsPanel);
         
         // === ZAKŁADKA "LOSOWANIE" ===
-        JPanel rollingPanel = new JPanel(new BorderLayout());
-        rollingPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        JPanel rollingPanel = createCardPanel();
         
-        // Panel statusu gry
-        JPanel statusPanel = new JPanel(new BorderLayout());
-        statusPanel.add(gameStatusLabel, BorderLayout.NORTH);
-        statusPanel.add(currentTurnLabel, BorderLayout.CENTER);
-        statusPanel.add(beginRollingBtn, BorderLayout.SOUTH);
+        JPanel statusCard = new JPanel(new BorderLayout(0, 25));
+        statusCard.setBackground(CARD_COLOR);
+        statusCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(PRIMARY_COLOR, 3),
+            BorderFactory.createEmptyBorder(40, 40, 40, 40)
+        ));
         
-        rollingPanel.add(statusPanel, BorderLayout.NORTH);
+        statusCard.add(gameStatusLabel, BorderLayout.NORTH);
+        statusCard.add(currentTurnLabel, BorderLayout.CENTER);
+        
+        JPanel rollingButtonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        rollingButtonPanel.setBackground(CARD_COLOR);
+        rollingButtonPanel.add(beginRollingBtn);
+        statusCard.add(rollingButtonPanel, BorderLayout.SOUTH);
+        
+        rollingPanel.add(statusCard, BorderLayout.CENTER);
         
         tabbedPane.addTab("Losowanie", rollingPanel);
         
         // === ZAKŁADKA "WYNIKI" ===
-        JPanel resultsPanel = new JPanel(new BorderLayout());
-        resultsPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        JPanel resultsPanel = createCardPanel();
         
-        resultsPanel.add(new JScrollPane(pairResultsPanel), BorderLayout.CENTER);
-        resultsPanel.add(downloadResultsBtn, BorderLayout.SOUTH);
+        JScrollPane resultsScroll = new JScrollPane(pairResultsPanel);
+        resultsScroll.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(SECONDARY_COLOR, 2),
+            "Finalne wyniki",
+            0, 0, new Font("Segoe UI", Font.BOLD, 14), SECONDARY_COLOR
+        ));
+        
+        JPanel downloadPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        downloadPanel.setBackground(CARD_COLOR);
+        downloadPanel.setBorder(BorderFactory.createEmptyBorder(25, 0, 0, 0));
+        downloadPanel.add(downloadResultsBtn);
+        
+        resultsPanel.add(resultsScroll, BorderLayout.CENTER);
+        resultsPanel.add(downloadPanel, BorderLayout.SOUTH);
         
         tabbedPane.addTab("Wyniki", resultsPanel);
         
-        // Dodanie głównego panelu do okna
-        add(tabbedPane, BorderLayout.CENTER);
+        // Dodanie głównego panelu do okna z padding
+        JPanel mainWrapper = new JPanel(new BorderLayout());
+        mainWrapper.setBackground(BACKGROUND_COLOR);
+        mainWrapper.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        mainWrapper.add(tabbedPane, BorderLayout.CENTER);
+        
+        add(mainWrapper, BorderLayout.CENTER);
     }
     
     /**
@@ -252,20 +512,35 @@ public class RandomizerApp extends JFrame {
     }
     
     /**
-     * Aktualizuje wyświetlanie nazw jako kolorowe etykiety
+     * Aktualizuje wyświetlanie nazw jako nowoczesne kolorowe karty
      */
     private void updateNameDisplay() {
         nameDisplayPanel.removeAll();
-        for (String name : names) {
-            // Tworzenie kolorowej etykiety dla każdej nazwy
+        
+        Color[] colors = {
+            SECONDARY_COLOR, PRIMARY_COLOR, ACCENT_COLOR, WARNING_COLOR,
+            new Color(156, 39, 176), new Color(255, 152, 0), new Color(76, 175, 80)
+        };
+        
+        for (int i = 0; i < names.size(); i++) {
+            String name = names.get(i);
             JLabel nameLabel = new JLabel(name);
+            
+            Color bgColor = colors[i % colors.length];
             nameLabel.setOpaque(true);
-            nameLabel.setBackground(new Color(40, 167, 69)); // Zielone tło
+            nameLabel.setBackground(bgColor);
             nameLabel.setForeground(Color.WHITE);
-            nameLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+            nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+            
+            // Nowoczesne obramowanie z zaokrąglonymi rogami (symulacja)
+            nameLabel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(bgColor.darker(), 1),
+                BorderFactory.createEmptyBorder(10, 15, 10, 15)
+            ));
+            
             nameDisplayPanel.add(nameLabel);
         }
-        // Odświeżenie wyświetlania
+        
         nameDisplayPanel.revalidate();
         nameDisplayPanel.repaint();
     }
@@ -520,45 +795,65 @@ public class RandomizerApp extends JFrame {
     }
     
     /**
-     * Wyświetla finalne przydziały w panelu wyników
+     * Wyświetla finalne przydziały z nowoczesnym stylem kart
      */
     private void displayAssignments() {
         pairResultsPanel.removeAll();
         
-        // Tytuł sekcji wyników
-        JLabel titleLabel = new JLabel("Wylosowane Pary (Każda osoba losuje kogoś):");
-        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 16f));
+        JLabel titleLabel = new JLabel("Wylosowane pary (każda osoba losuje kogoś):");
+        styleLabel(titleLabel, new Font("Segoe UI", Font.BOLD, 18), TEXT_COLOR);
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 25, 0));
         pairResultsPanel.add(titleLabel);
         
         if (finalPairs.isEmpty()) {
-            // Brak przydziałów - błąd
-            pairResultsPanel.add(new JLabel("Nie udało się wygenerować przydziałów z obecnymi ograniczeniami."));
+            JLabel errorLabel = new JLabel("Nie udało się wygenerować przydziałów z obecnymi ograniczeniami.");
+            styleLabel(errorLabel, new Font("Segoe UI", Font.BOLD, 14), ACCENT_COLOR);
+            pairResultsPanel.add(errorLabel);
         } else {
-            // Wyświetlanie każdego przydziału
             for (Assignment assignment : finalPairs) {
-                JPanel assignmentPanel = new JPanel(new BorderLayout());
-                assignmentPanel.setBorder(BorderFactory.createEtchedBorder());
-                assignmentPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+                JPanel assignmentCard = new JPanel(new BorderLayout(20, 0));
+                assignmentCard.setBackground(CARD_COLOR);
+                assignmentCard.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(BORDER_COLOR, 1),
+                    BorderFactory.createEmptyBorder(20, 25, 20, 25)
+                ));
+                assignmentCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 70));
                 
-                // Nazwy osób (kto → kogo)
+                // Dodanie cienia (symulacja przez gradient border)
+                assignmentCard.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(0,0,0,10), 1),
+                        BorderFactory.createLineBorder(CARD_COLOR, 2)
+                    ),
+                    BorderFactory.createEmptyBorder(20, 25, 20, 25)
+                ));
+                
                 JLabel namesLabel = new JLabel(assignment.drawer + " → " + assignment.target);
-                namesLabel.setFont(namesLabel.getFont().deriveFont(Font.BOLD));
+                styleLabel(namesLabel, new Font("Segoe UI", Font.BOLD, 16), TEXT_COLOR);
                 
-                // Wylosowana litera
+                // Stylizowana litera
+                JPanel letterPanel = new JPanel(new BorderLayout());
+                letterPanel.setBackground(ACCENT_COLOR);
+                letterPanel.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(ACCENT_COLOR.darker(), 2),
+                    BorderFactory.createEmptyBorder(8, 8, 8, 8)
+                ));
+                letterPanel.setPreferredSize(new Dimension(50, 45));
+                
                 JLabel letterLabel = new JLabel(String.valueOf(assignment.letter));
-                letterLabel.setFont(letterLabel.getFont().deriveFont(Font.BOLD, 20f));
-                letterLabel.setForeground(new Color(255, 107, 107));
+                letterLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+                letterLabel.setForeground(Color.WHITE);
                 letterLabel.setHorizontalAlignment(SwingConstants.CENTER);
-                letterLabel.setPreferredSize(new Dimension(40, 30));
+                letterPanel.add(letterLabel, BorderLayout.CENTER);
                 
-                assignmentPanel.add(namesLabel, BorderLayout.CENTER);
-                assignmentPanel.add(letterLabel, BorderLayout.EAST);
+                assignmentCard.add(namesLabel, BorderLayout.CENTER);
+                assignmentCard.add(letterPanel, BorderLayout.EAST);
                 
-                pairResultsPanel.add(assignmentPanel);
+                pairResultsPanel.add(assignmentCard);
+                pairResultsPanel.add(Box.createVerticalStrut(15));
             }
         }
         
-        // Odświeżenie wyświetlania
         pairResultsPanel.revalidate();
         pairResultsPanel.repaint();
     }
