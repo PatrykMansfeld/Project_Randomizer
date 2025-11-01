@@ -2,8 +2,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.Random;
-import java.awt.image.BufferedImage;
 
 /**
  * Klasa RollingDialog - okno modalne do losowania liter przez poszczególnych graczy
@@ -14,7 +12,6 @@ public class RollingDialog extends JDialog {
     private static final Color PRIMARY_COLOR = new Color(52, 152, 219);      // Niebieski
     private static final Color SECONDARY_COLOR = new Color(46, 204, 113);    // Zielony
     private static final Color ACCENT_COLOR = new Color(231, 76, 60);        // Czerwony
-    private static final Color WARNING_COLOR = new Color(255, 193, 7);       // Żółty
     private static final Color BACKGROUND_COLOR = new Color(248, 249, 250);  // Jasny szary
     private static final Color CARD_COLOR = Color.WHITE;                     // Biały
     private static final Color TEXT_COLOR = Color.BLACK;                     // Wszystkie teksty czarne
@@ -50,6 +47,9 @@ public class RollingDialog extends JDialog {
     // Przycisk przechodzący do następnego gracza
     private JButton nextButton;
     
+    // === REFERENCJA DO GŁÓWNEJ APLIKACJI ===
+    private RandomizerApp randomizer; // Referencja do głównej aplikacji
+    
     /**
      * Konstruktor okna modalnego dla losowania litery
      * @param parent główne okno aplikacji
@@ -65,6 +65,7 @@ public class RollingDialog extends JDialog {
         this.playerName = playerName;
         this.turnNumber = turnNumber;
         this.totalPlayers = totalPlayers;
+        this.randomizer = parent; // Zapisanie referencji do głównej aplikacji
         
         // Ustawienie tła okna
         getContentPane().setBackground(BACKGROUND_COLOR);
@@ -151,7 +152,7 @@ public class RollingDialog extends JDialog {
         turnInfoLabel.setForeground(TEXT_COLOR);
         
         // === INSTRUKCJE DLA GRACZA ===
-        instructionsLabel = new JLabel("<html><center>" + playerName + ", kliknij przycisk poniżej<br>aby wylosować swoją literę!</center></html>");
+        instructionsLabel = new JLabel("<html><center>" + playerName + ", kliknij przycisk poniżej<br>aby wylosować swoją literę i osobę!</center></html>");
         instructionsLabel.setFont(new Font("Segoe UI", Font.PLAIN, 18)); // Zwiększona czcionka
         instructionsLabel.setHorizontalAlignment(SwingConstants.CENTER);
         instructionsLabel.setBorder(BorderFactory.createCompoundBorder(
@@ -163,13 +164,13 @@ public class RollingDialog extends JDialog {
         instructionsLabel.setForeground(TEXT_COLOR);
         
         // === PRZYCISK LOSOWANIA z nowoczesnym stylem ===
-        rollButton = createStyledButton("Losuj Literę!", ACCENT_COLOR, Color.WHITE, new Dimension(320, 80)); // Zwiększony rozmiar
+        rollButton = createStyledButton("Losuj!", ACCENT_COLOR, Color.WHITE, new Dimension(320, 80)); // Zwiększony rozmiar
         rollButton.setFont(new Font("Segoe UI", Font.BOLD, 22)); // Zwiększona czcionka
         
         // === PANEL WYNIKÓW (początkowo ukryty) ===
         resultPanel = new JPanel();
         resultPanel.setLayout(new BoxLayout(resultPanel, BoxLayout.Y_AXIS));
-        resultPanel.setPreferredSize(new Dimension(600, 250)); // Zwiększony rozmiar
+        resultPanel.setPreferredSize(new Dimension(600, 350)); // Zwiększony rozmiar
         resultPanel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(SECONDARY_COLOR, 3),
             BorderFactory.createEmptyBorder(40, 40, 40, 40) // Zwiększone padding
@@ -234,7 +235,7 @@ public class RollingDialog extends JDialog {
                         )
                     ));
                     if (button == rollButton && button.isEnabled()) {
-                        button.setText("Losuj Literę!");
+                        button.setText("Losuj!");
                     }
                 }
             }
@@ -341,7 +342,7 @@ public class RollingDialog extends JDialog {
      */
     private void setupEventListeners() {
         // Przycisk losowania litery
-        rollButton.addActionListener(e -> rollLetter());
+        rollButton.addActionListener(e -> roll());
         
         // Przycisk następnego gracza - zamyka okno modalne
         nextButton.addActionListener(e -> {
@@ -351,73 +352,38 @@ public class RollingDialog extends JDialog {
     }
     
     /**
-     * Główna metoda losowania litery dla aktualnego gracza z ulepszoną animacją
-     * Generuje losową literę, wybiera losowy cel i wyświetla wynik
+     * Główna metoda losowania - wybiera literę i osobę dla gracza
      */
-    private void rollLetter() {
-        // === POBRANIE LOSOWEJ LITERY ===
-        // Uzyskanie dostępu do głównego okna i wywołanie metody losowania
-        RandomizerApp parent = (RandomizerApp) getOwner();
-        char letter = parent.getRandomLetterForModal();
+    private void roll() {
+        // Wylosowanie litery
+        char letter = randomizer.getRandomLetterForModal();
+        // Przydzielenie osoby dla aktualnego gracza (zapis do finalPairs w RandomizerApp)
+        String target = randomizer.assignTargetForOnRoll(playerName, letter);
         
-        // === WYBÓR LOSOWEGO CELU DO WYŚWIETLENIA ===
-        // Tworzenie listy dostępnych celów (wszyscy oprócz aktualnego gracza)
-        java.util.List<String> availableTargets = new java.util.ArrayList<>();
-        for (String name : parent.getNames()) {
-            if (!name.equals(playerName)) {
-                availableTargets.add(name);
-            }
-        }
-        
-        // Wybór losowego celu lub domyślnej wartości
-        String targetForDisplay = availableTargets.isEmpty() ? 
-            "Inny Gracz" : 
-            availableTargets.get(new Random().nextInt(availableTargets.size()));
-        
-        // === UTWORZENIE WYNIKU LOSOWANIA ===
+        // Zapisz wynik (tylko imię i litera - target jest w finalPairs)
         result = new RandomizerApp.PlayerResult(playerName, letter);
         
-        // === WYŚWIETLENIE WYNIKU ===
-        showResult(targetForDisplay, letter);
+        // Wyświetl wynik (litera + osoba)
+        showResult(letter, target);
         
-        // === AKTUALIZACJA INTERFEJSU Z ANIMACJĄ ===
+        // Zaktualizuj przyciski
+        rollButton.setText("Zakończ");
         rollButton.setEnabled(false);
-        rollButton.setText("Wylosowano!");
-        rollButton.setBackground(SECONDARY_COLOR);
         nextButton.setEnabled(true);
-        
-        // Ulepszony tekst instrukcji z emoji i formatowaniem
-        instructionsLabel.setText("<html><center>" + playerName + " wylosował " + targetForDisplay + "<br>z literą " + letter + "!<br><br>Kliknij 'Następny Gracz' aby kontynuować.</center></html>");
     }
-    
+
     /**
      * Wyświetla wynik losowania w panelu wyników z nowoczesną animacją i stylem
-     * @param target nazwa wylosowanej osoby (do wyświetlenia)
      * @param letter wylosowana litera
+     * @param target wylosowana osoba
      */
-    private void showResult(String target, char letter) {
+    private void showResult(char letter, String target) {
         resultPanel.removeAll();
-        
         // === TYTUŁ WYNIKU ===
-        JLabel titleLabel = new JLabel("Wynik Losowania:");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        JLabel titleLabel = new JLabel("Wynik losowania:");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         titleLabel.setForeground(TEXT_COLOR);
-        
-        // === KARTA Z NAZWĄ WYLOSOWANEJ OSOBY ===
-        JPanel targetCard = new JPanel(new BorderLayout());
-        targetCard.setBackground(new Color(PRIMARY_COLOR.getRed(), PRIMARY_COLOR.getGreen(), PRIMARY_COLOR.getBlue(), 40));
-        targetCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(PRIMARY_COLOR, 2),
-            BorderFactory.createEmptyBorder(18, 25, 18, 25)
-        ));
-        targetCard.setMaximumSize(new Dimension(450, 70));
-        
-        JLabel targetLabel = new JLabel(target);
-        targetLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        targetLabel.setForeground(TEXT_COLOR);
-        targetLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        targetCard.add(targetLabel, BorderLayout.CENTER);
         
         // === KARTA Z LITERĄ (główny element) ===
         JPanel letterCard = new JPanel(new BorderLayout());
@@ -426,20 +392,46 @@ public class RollingDialog extends JDialog {
             BorderFactory.createLineBorder(ACCENT_COLOR.darker(), 3),
             BorderFactory.createEmptyBorder(25, 25, 25, 25)
         ));
-        letterCard.setMaximumSize(new Dimension(120, 100));
-        
+        letterCard.setMaximumSize(new Dimension(160, 130));
         JLabel letterLabel = new JLabel(String.valueOf(letter));
         letterLabel.setFont(new Font("Segoe UI", Font.BOLD, 52));
         letterLabel.setForeground(Color.WHITE);
         letterLabel.setHorizontalAlignment(SwingConstants.CENTER);
         letterCard.add(letterLabel, BorderLayout.CENTER);
         
+        // === OPIS LITERY ===
+        JLabel letterDesc = new JLabel("Wylosowana litera");
+        letterDesc.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        letterDesc.setForeground(TEXT_COLOR);
+        letterDesc.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        // === KARTA Z OSOBĄ ===
+        JPanel targetCard = new JPanel();
+        targetCard.setLayout(new BorderLayout());
+        targetCard.setBackground(CARD_COLOR);
+        targetCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(PRIMARY_COLOR, 3),
+            BorderFactory.createEmptyBorder(20, 25, 20, 25)
+        ));
+        JLabel targetTitle = new JLabel("Wylosowana osoba:");
+        targetTitle.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        targetTitle.setForeground(TEXT_COLOR);
+        targetTitle.setHorizontalAlignment(SwingConstants.CENTER);
+        JLabel targetValue = new JLabel((target == null || target.isEmpty()) ? "(brak)" : target);
+        targetValue.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        targetValue.setForeground(PRIMARY_COLOR.darker());
+        targetValue.setHorizontalAlignment(SwingConstants.CENTER);
+        targetCard.add(targetTitle, BorderLayout.NORTH);
+        targetCard.add(targetValue, BorderLayout.CENTER);
+        
         // === SKŁADANIE ELEMENTÓW WYNIKU ===
         resultPanel.add(titleLabel);
-        resultPanel.add(Box.createVerticalStrut(20));
-        resultPanel.add(targetCard);
-        resultPanel.add(Box.createVerticalStrut(20));
+        resultPanel.add(Box.createVerticalStrut(16));
         resultPanel.add(letterCard);
+        resultPanel.add(Box.createVerticalStrut(8));
+        resultPanel.add(letterDesc);
+        resultPanel.add(Box.createVerticalStrut(26));
+        resultPanel.add(targetCard);
         
         // === WYŚWIETLENIE Z ANIMACJĄ ===
         resultPanel.setVisible(true);

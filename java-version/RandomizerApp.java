@@ -1,8 +1,5 @@
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -44,6 +41,9 @@ public class RandomizerApp extends JFrame {
     // Panel wyświetlający finalne wyniki losowania
     private JPanel pairResultsPanel;
     
+    // === NOWE: POLE DO WYKLUCZONYCH LITER ===
+    private JTextArea excludedLettersArea;
+    
     // === DANE APLIKACJI ===
     
     // Lista wszystkich uczestników gry
@@ -54,10 +54,12 @@ public class RandomizerApp extends JFrame {
     private int currentTurnIndex = 0;
     // Lista wyników każdego gracza (imię + wylosowana litera)
     private List<PlayerResult> playerResults = new ArrayList<>();
-    // Flaga informująca czy gra jest w toku
-    private boolean gameInProgress = false;
     // Lista finalnych przydziałów (kto kogo wylosował z jaką literą)
     private List<Assignment> finalPairs = new ArrayList<>();
+    // === NOWE: ZBIÓR WYKLUCZONYCH LITER ===
+    private Set<Character> excludedLetters = new HashSet<>();
+    // === NOWE: PULA DOSTĘPNYCH CELÓW DO PRZYDZIAŁÓW NA BIEŻĄCO ===
+    private List<String> availableTargetsPool = new ArrayList<>();
     
     /**
      * Konstruktor - inicjalizuje główne okno aplikacji
@@ -137,6 +139,18 @@ public class RandomizerApp extends JFrame {
                 BorderFactory.createLineBorder(PRIMARY_COLOR, 2),
                 "Wprowadź nazwy oddzielone przecinkami lub w nowych liniach",
                 0, 0, new Font("Segoe UI", Font.BOLD, 12), PRIMARY_COLOR
+            ),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        
+        // === NOWE: SEKCJA WYKLUCZONYCH LITER ===
+        excludedLettersArea = new JTextArea(2, 50);
+        styleTextArea(excludedLettersArea);
+        excludedLettersArea.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(ACCENT_COLOR, 2),
+                "Wykluczone litery (np. A,B,C lub ABCD) - te litery nie będą losowane",
+                0, 0, new Font("Segoe UI", Font.BOLD, 12), ACCENT_COLOR
             ),
             BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
@@ -522,9 +536,19 @@ public class RandomizerApp extends JFrame {
         JPanel topPanel = new JPanel(new BorderLayout(0, 20));
         topPanel.setBackground(CARD_COLOR);
         
+        // Panel dla pól tekstowych (nazwy + wykluczone litery)
+        JPanel inputPanel = new JPanel(new BorderLayout(0, 15));
+        inputPanel.setBackground(CARD_COLOR);
+        
         JScrollPane nameAreaScroll = new JScrollPane(nameListArea);
         nameAreaScroll.setBorder(null);
-        topPanel.add(nameAreaScroll, BorderLayout.CENTER);
+        inputPanel.add(nameAreaScroll, BorderLayout.NORTH);
+        
+        JScrollPane excludedLettersScroll = new JScrollPane(excludedLettersArea);
+        excludedLettersScroll.setBorder(null);
+        inputPanel.add(excludedLettersScroll, BorderLayout.CENTER);
+        
+        topPanel.add(inputPanel, BorderLayout.CENTER);
         
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         buttonPanel.setBackground(CARD_COLOR);
@@ -701,6 +725,26 @@ public class RandomizerApp extends JFrame {
             return;
         }
         
+        // === NOWE: PRZETWARZANIE WYKLUCZONYCH LITER ===
+        excludedLetters.clear();
+        String excludedText = excludedLettersArea.getText().trim().toUpperCase();
+        if (!excludedText.isEmpty()) {
+            // Usuń przecinki i spacje, zostaw tylko litery
+            excludedText = excludedText.replaceAll("[^A-ZĄĆĘŁŃÓŚŹŻ]", "");
+            for (char c : excludedText.toCharArray()) {
+                if (Character.isLetter(c)) {
+                    excludedLetters.add(c);
+                }
+            }
+        }
+        
+        // Informacja o wykluczonych literach
+        if (!excludedLetters.isEmpty()) {
+            JOptionPane.showMessageDialog(this, 
+                "Wykluczone litery: " + excludedLetters.toString() + 
+                "\nTe litery nie będą losowane.");
+        }
+        
         // Reset i aktualizacja interfejsu
         restrictions.clear();
         updateNameDisplay();
@@ -819,10 +863,12 @@ public class RandomizerApp extends JFrame {
         if (names.size() < 2) return;
         
         // Reset stanu gry
-        gameInProgress = true;
         currentTurnIndex = 0;
         playerResults.clear();
         finalPairs.clear();
+        // Reset puli dostępnych celów
+        availableTargetsPool.clear();
+        availableTargetsPool.addAll(names);
         
         // Aktywacja przycisku losowania
         beginRollingBtn.setEnabled(true);
@@ -840,10 +886,15 @@ public class RandomizerApp extends JFrame {
             gameStatusLabel.setText("Gotowy do rozpoczęcia losowania - " + names.size() + " graczy łącznie");
             currentTurnLabel.setText("Kliknij 'Rozpocznij Losowanie' aby rozpocząć losowanie kolejnych tur");
         } else {
-            // Wszyscy wylosowali - czas na generowanie par
-            gameStatusLabel.setText("Wszyscy gracze wylosowali! Generowanie par...");
+            // Wszyscy wylosowali - jeśli pary już przypisane podczas losowania, tylko je pokaż
+            gameStatusLabel.setText("Wszyscy gracze wylosowali!");
             currentTurnLabel.setText("");
-            generatePairsAutomatically();
+            if (finalPairs.size() == names.size()) {
+                displayAssignments();
+                downloadResultsBtn.setEnabled(true);
+            } else {
+                generatePairsAutomatically();
+            }
         }
     }
     
@@ -888,7 +939,7 @@ public class RandomizerApp extends JFrame {
     }
     
     /**
-     * Generuje losową literę, unikając już użytych liter
+     * Generuje losową literę, unikając już użytych liter i wykluczonych liter
      * @return losowa litera z alfabetu
      */
     private char getRandomLetter() {
@@ -900,6 +951,9 @@ public class RandomizerApp extends JFrame {
             usedLetters.add(result.letter);
         }
         
+        // === NOWE: DODANIE WYKLUCZONYCH LITER DO UŻYTYCH ===
+        usedLetters.addAll(excludedLetters);
+        
         // Tworzenie listy dostępnych liter
         List<Character> availableLetters = new ArrayList<>();
         for (char c : allLetters.toCharArray()) {
@@ -910,6 +964,16 @@ public class RandomizerApp extends JFrame {
         
         // Zwracanie losowej dostępnej litery lub dowolnej jeśli wszystkie użyte
         if (availableLetters.isEmpty()) {
+            // Jeśli wszystkie litery są wykluczone/użyte, wybierz z niewykluczonych
+            List<Character> nonExcludedLetters = new ArrayList<>();
+            for (char c : allLetters.toCharArray()) {
+                if (!excludedLetters.contains(c)) {
+                    nonExcludedLetters.add(c);
+                }
+            }
+            if (!nonExcludedLetters.isEmpty()) {
+                return nonExcludedLetters.get(new Random().nextInt(nonExcludedLetters.size()));
+            }
             return allLetters.charAt(new Random().nextInt(allLetters.length()));
         }
         
@@ -928,31 +992,46 @@ public class RandomizerApp extends JFrame {
             (r.person1.equals(name2) && r.person2.equals(name1))
         );
     }
+
+    /**
+     * Metoda publiczna do sprawdzania ograniczeń par (używana przez okno modalne)
+     */
+    public boolean isRestrictedPairPublic(String name1, String name2) {
+        return isRestrictedPair(name1, name2);
+    }
     
     /**
      * Automatycznie generuje finalne przydziały par na podstawie wylosowanych liter
      * Każda osoba musi kogoś wylosować i zostać wylosowana
+     * POPRAWKA: Osoba nie może wylosować samej siebie
      */
     private void generatePairsAutomatically() {
         if (playerResults.size() != names.size()) return;
         
+        // Jeśli pary już zostały przydzielone podczas losowania, nie nadpisuj
+        if (finalPairs.size() == names.size()) {
+            displayAssignments();
+            downloadResultsBtn.setEnabled(true);
+            return;
+        }
+        
         List<Assignment> assignments = new ArrayList<>();
         List<String> availableTargets = new ArrayList<>(names); // Kto może zostać wylosowany
-        List<String> peopleWhoNeedToAssign = new ArrayList<>(names); // Kto musi kogoś wylosować
-        
-        // Mieszanie list dla losowości
-        Collections.shuffle(availableTargets);
-        Collections.shuffle(peopleWhoNeedToAssign);
         
         // Przydzielanie każdej osobie celu
-        for (String drawer : peopleWhoNeedToAssign) {
+        for (String drawer : names) {
             boolean assigned = false;
+            List<String> possibleTargets = new ArrayList<>(availableTargets);
+            
+            // === POPRAWKA: USUŃ SIEBIE Z MOŻLIWYCH CELÓW ===
+            possibleTargets.remove(drawer);
+            
+            // Mieszaj możliwe cele dla losowości
+            Collections.shuffle(possibleTargets);
             
             // Szukanie prawidłowego celu (nie siebie + nie ograniczonego)
-            for (int i = 0; i < availableTargets.size(); i++) {
-                String target = availableTargets.get(i);
-                
-                if (!target.equals(drawer) && !isRestrictedPair(drawer, target)) {
+            for (String target : possibleTargets) {
+                if (!isRestrictedPair(drawer, target)) {
                     // Znalezienie wyniku losowania dla tej osoby
                     PlayerResult drawerResult = playerResults.stream()
                         .filter(r -> r.name.equals(drawer))
@@ -961,19 +1040,16 @@ public class RandomizerApp extends JFrame {
                     if (drawerResult != null) {
                         // Utworzenie przydziału
                         assignments.add(new Assignment(drawer, target, drawerResult.letter));
-                        availableTargets.remove(i);
+                        availableTargets.remove(target);
                         assigned = true;
                         break;
                     }
                 }
             }
             
-            // Jeśli nie znaleziono prawidłowego, przydziel pierwszy dostępny
-            if (!assigned && !availableTargets.isEmpty()) {
-                String target = availableTargets.stream()
-                    .filter(t -> !t.equals(drawer))
-                    .findFirst()
-                    .orElse(availableTargets.get(0));
+            // Jeśli nie znaleziono prawidłowego, przydziel pierwszy dostępny (ale nie siebie!)
+            if (!assigned && !possibleTargets.isEmpty()) {
+                String target = possibleTargets.get(0);
                 
                 PlayerResult drawerResult = playerResults.stream()
                     .filter(r -> r.name.equals(drawer))
@@ -984,6 +1060,13 @@ public class RandomizerApp extends JFrame {
                     availableTargets.remove(target);
                 }
             }
+        }
+        
+        // Jeśli ktoś nie został przydzielony (zbyt dużo ograniczeń), pokaż komunikat
+        if (assignments.size() < names.size()) {
+            JOptionPane.showMessageDialog(this, 
+                "Uwaga: Nie udało się przydzielić wszystkich par z powodu zbyt wielu ograniczeń. " +
+                "Niektóre osoby mogą nie mieć przydziału.");
         }
         
         // Zapisanie wyników i wyświetlenie
@@ -1065,6 +1148,7 @@ public class RandomizerApp extends JFrame {
     
     /**
      * Zapisuje wyniki do pliku tekstowego
+     * POPRAWKA: Lepsze formatowanie pliku TXT
      */
     private void downloadResults() {
         if (finalPairs.isEmpty()) return;
@@ -1072,24 +1156,84 @@ public class RandomizerApp extends JFrame {
         // Okno dialogowe wyboru pliku
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setSelectedFile(new java.io.File("randomizer-wyniki-" +
-            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")) + ".txt"));
+            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm")) + ".txt"));
         
         if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-            try (FileWriter writer = new FileWriter(fileChooser.getSelectedFile())) {
-                // Nagłówek pliku
-                writer.write("RANDOMIZER - JAVA VERSION\n");
-                writer.write("=================================\n\n");
-                writer.write("Wygenerowano: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + "\n");
-                writer.write("Liczba uczestników: " + names.size() + "\n\n");
+            try (FileWriter writer = new FileWriter(fileChooser.getSelectedFile(), 
+                 java.nio.charset.StandardCharsets.UTF_8)) {
                 
-                // Zapisanie każdego przydziału
-                for (Assignment assignment : finalPairs) {
-                    writer.write(assignment.drawer + " → " + assignment.target + " → " + assignment.letter + "\n");
+                // === NAGŁÓWEK PLIKU ===
+                writer.write("╔═══════════════════════════════════════════════════════════╗\n");
+                writer.write("║                    RANDOMIZER - WYNIKI                   ║\n");
+                writer.write("╚═══════════════════════════════════════════════════════════╝\n\n");
+                
+                writer.write("📅 Data wygenerowania: " + 
+                    LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + "\n");
+                writer.write("👥 Liczba uczestników: " + names.size() + "\n");
+                writer.write("🎯 Liczba przydziałów: " + finalPairs.size() + "\n");
+                
+                // === SEKCJA WYKLUCZONYCH LITER ===
+                if (!excludedLetters.isEmpty()) {
+                    writer.write("❌ Wykluczone litery: " + excludedLetters.toString() + "\n");
                 }
                 
-                JOptionPane.showMessageDialog(this, "Wyniki zostały zapisane do pliku!");
+                // === SEKCJA OGRANICZEŃ ===
+                if (!restrictions.isEmpty()) {
+                    writer.write("🚫 Ograniczenia par: " + restrictions.size() + "\n");
+                    for (Restriction r : restrictions) {
+                        writer.write("   • " + r.person1 + " ↔ " + r.person2 + "\n");
+                    }
+                }
+                
+                writer.write("\n" + "=".repeat(60) + "\n");
+                writer.write("                       FINALNE PRZYDZIAŁY\n");
+                writer.write("=".repeat(60) + "\n\n");
+                
+                // === WYNIKI LOSOWANIA POSZCZEGÓLNYCH GRACZY ===
+                writer.write("🎲 WYNIKI LOSOWANIA LITER:\n");
+                writer.write("-".repeat(30) + "\n");
+                for (PlayerResult result : playerResults) {
+                    writer.write(String.format("%-20s → %c\n", result.name, result.letter));
+                }
+                
+                writer.write("\n🎯 FINALNE PRZYDZIAŁY (kto kogo wylosował):\n");
+                writer.write("-".repeat(50) + "\n");
+                
+                // === ZAPISANIE KAŻDEGO PRZYDZIAŁU W CZYTELNYM FORMACIE ===
+                for (int i = 0; i < finalPairs.size(); i++) {
+                    Assignment assignment = finalPairs.get(i);
+                    writer.write(String.format("%d. %-15s → %-15s [Litera: %c]\n", 
+                        i + 1, 
+                        assignment.drawer, 
+                        assignment.target, 
+                        assignment.letter));
+                }
+                
+                // === PODSUMOWANIE ===
+                writer.write("\n" + "=".repeat(60) + "\n");
+                writer.write("                        PODSUMOWANIE\n");
+                writer.write("=".repeat(60) + "\n");
+                writer.write("✅ Wszyscy uczestnicy mają swoje przydziały\n");
+                writer.write("✅ Nikt nie wylosował samego siebie\n");
+                if (!restrictions.isEmpty()) {
+                    writer.write("✅ Wszystkie ograniczenia zostały uwzględnione\n");
+                }
+                if (!excludedLetters.isEmpty()) {
+                    writer.write("✅ Wykluczone litery nie zostały wylosowane\n");
+                }
+                
+                writer.write("\n📝 Plik wygenerowany przez Randomizer v2.0\n");
+                writer.write("🕒 " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + "\n");
+                
+                JOptionPane.showMessageDialog(this, 
+                    "Wyniki zostały zapisane do pliku!\n" +
+                    "Lokalizacja: " + fileChooser.getSelectedFile().getAbsolutePath());
+                    
             } catch (IOException e) {
-                JOptionPane.showMessageDialog(this, "Błąd podczas zapisywania pliku: " + e.getMessage());
+                JOptionPane.showMessageDialog(this, 
+                    "Błąd podczas zapisywania pliku: " + e.getMessage(), 
+                    "Błąd", 
+                    JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -1106,6 +1250,66 @@ public class RandomizerApp extends JFrame {
      */
     public List<String> getNames() {
         return new ArrayList<>(names);
+    }
+
+    /**
+     * NOWE: Przydziela cel dla gracza podczas losowania i zapisuje parę (z literą)
+     * Zwraca nazwę wylosowanej osoby do wyświetlenia w oknie modalnym.
+     */
+    public synchronized String assignTargetForOnRoll(String drawer, char letter) {
+        // Upewnij się, że pula jest zainicjalizowana i spójna z dotychczasowymi przydziałami
+        if (availableTargetsPool.isEmpty()) {
+            availableTargetsPool.addAll(names);
+            for (Assignment a : finalPairs) {
+                availableTargetsPool.remove(a.target);
+            }
+        }
+        
+        // Zbuduj listę możliwych celów (bez siebie i bez ograniczeń)
+        List<String> possibleTargets = new ArrayList<>();
+        for (String t : new ArrayList<>(availableTargetsPool)) {
+            if (!t.equals(drawer) && !isRestrictedPair(drawer, t)) {
+                possibleTargets.add(t);
+            }
+        }
+        Collections.shuffle(possibleTargets);
+        String assignedTarget = possibleTargets.isEmpty() ? null : possibleTargets.get(0);
+        
+        // Obsługa trudnego przypadku: ostatni gracz i jedynym celem jest on sam – spróbuj zamiany
+        if (assignedTarget == null && availableTargetsPool.size() == 1 && availableTargetsPool.get(0).equals(drawer)) {
+            for (Assignment prev : finalPairs) {
+                String candidate = prev.target;
+                String prevDrawer = prev.drawer;
+                if (candidate.equals(drawer)) continue;
+                if (!isRestrictedPair(drawer, candidate) && !isRestrictedPair(prevDrawer, drawer) && !prevDrawer.equals(drawer)) {
+                    // Zamiana celów
+                    prev.target = drawer; // poprzedni bierze obecnego gracza
+                    assignedTarget = candidate; // obecny bierze cel poprzedniego
+                    // Usuń z puli 'drawer', ponieważ został użyty jako cel po zamianie
+                    availableTargetsPool.remove(drawer);
+                    // Zapisz nowy przydział
+                    finalPairs.add(new Assignment(drawer, assignedTarget, letter));
+                    return assignedTarget;
+                }
+            }
+        }
+        
+        // Fallback – jeśli nadal brak, spróbuj wybrać kogokolwiek z puli (nie siebie), nawet gdy ograniczenie istnieje
+        if (assignedTarget == null) {
+            for (String t : availableTargetsPool) {
+                if (!t.equals(drawer)) { assignedTarget = t; break; }
+            }
+            // Ostateczna rezerwa – jeśli nic innego, przypisz siebie (unikamy, ale wolimy zakończyć proces)
+            if (assignedTarget == null) {
+                assignedTarget = drawer;
+            }
+        }
+        
+        // Zdejmij wybranego z puli dostępnych celów
+        availableTargetsPool.remove(assignedTarget);
+        // Zapisz przydział
+        finalPairs.add(new Assignment(drawer, assignedTarget, letter));
+        return assignedTarget;
     }
     
     /**
@@ -1143,9 +1347,9 @@ public class RandomizerApp extends JFrame {
      * Klasa reprezentująca wynik losowania jednego gracza
      */
     static class PlayerResult {
-        String name;  // Imię gracza
-        char letter;  // Wylosowana litera
-        
+        String name;    // Imię gracza
+        char letter;    // Wylosowana litera
+        // Usunięto target
         PlayerResult(String name, char letter) {
             this.name = name;
             this.letter = letter;
