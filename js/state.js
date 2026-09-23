@@ -4,6 +4,8 @@ Randomizer.State = (function () {
     'use strict';
 
     const ALL_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const RANDOM_ATTEMPTS = 200;
+    const MAX_BACKTRACK_STEPS = 200000;
 
     let names = [];
     let excludedLetters = new Set();
@@ -11,7 +13,8 @@ Randomizer.State = (function () {
     let currentTurnIndex = 0;
     let playerResults = []; // {name, letter}
     let finalPairs = []; // {drawer, target, letter}
-    let availableTargetsPool = [];
+    let roundAssignments = null; // Map drawer -> target, precomputed for the whole round
+    let roundLetters = null; // Map drawer -> letter, precomputed for the whole round
 
     function parseNames(text) {
         return text
@@ -52,10 +55,7 @@ Randomizer.State = (function () {
         names = [];
         excludedLetters = new Set();
         restrictions = [];
-        currentTurnIndex = 0;
-        playerResults = [];
-        finalPairs = [];
-        availableTargetsPool = [];
+        startGame();
     }
 
     function addRestriction(person1, person2) {
@@ -89,78 +89,109 @@ Randomizer.State = (function () {
         currentTurnIndex = 0;
         playerResults = [];
         finalPairs = [];
-        availableTargetsPool = [...names];
-    }
-
-    function getRandomLetter() {
-        const usedLetters = new Set(playerResults.map((r) => r.letter));
-        excludedLetters.forEach((l) => usedLetters.add(l));
-
-        const availableLetters = [...ALL_LETTERS].filter((c) => !usedLetters.has(c));
-
-        if (availableLetters.length === 0) {
-            const nonExcluded = [...ALL_LETTERS].filter((c) => !excludedLetters.has(c));
-            if (nonExcluded.length > 0) {
-                return nonExcluded[Math.floor(Math.random() * nonExcluded.length)];
-            }
-            return ALL_LETTERS[Math.floor(Math.random() * ALL_LETTERS.length)];
-        }
-
-        return availableLetters[Math.floor(Math.random() * availableLetters.length)];
+        roundAssignments = null;
+        roundLetters = null;
     }
 
     function shuffle(arr) {
-        for (let i = arr.length - 1; i > 0; i--) {
+        const copy = [...arr];
+        for (let i = copy.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [arr[i], arr[j]] = [arr[j], arr[i]];
+            [copy[i], copy[j]] = [copy[j], copy[i]];
         }
-        return arr;
+        return copy;
     }
 
-    function assignTargetForOnRoll(drawer, letter) {
-        if (availableTargetsPool.length === 0) {
-            availableTargetsPool = [...names];
-            finalPairs.forEach((a) => {
-                const idx = availableTargetsPool.indexOf(a.target);
-                if (idx !== -1) availableTargetsPool.splice(idx, 1);
-            });
-        }
-
-        let possibleTargets = availableTargetsPool.filter((t) => t !== drawer && !isRestrictedPair(drawer, t));
-        shuffle(possibleTargets);
-        let assignedTarget = possibleTargets.length > 0 ? possibleTargets[0] : null;
-
-        if (assignedTarget === null && availableTargetsPool.length === 1 && availableTargetsPool[0] === drawer) {
-            for (const prev of finalPairs) {
-                const candidate = prev.target;
-                const prevDrawer = prev.drawer;
-                if (candidate === drawer) continue;
-                if (!isRestrictedPair(drawer, candidate) && !isRestrictedPair(prevDrawer, drawer) && prevDrawer !== drawer) {
-                    prev.target = drawer;
-                    assignedTarget = candidate;
-                    const idx = availableTargetsPool.indexOf(drawer);
-                    if (idx !== -1) availableTargetsPool.splice(idx, 1);
-                    finalPairs.push({ drawer, target: assignedTarget, letter });
-                    return assignedTarget;
-                }
+    // Szybka ścieżka: kilkaset losowych tasowań i sprawdzenie warunków —
+    // w praktyce wystarcza dla typowej liczby ograniczeń.
+    function tryRandomAssignments() {
+        for (let attempt = 0; attempt < RANDOM_ATTEMPTS; attempt++) {
+            const targets = shuffle(names);
+            const valid = names.every((drawer, i) => drawer !== targets[i] && !isRestrictedPair(drawer, targets[i]));
+            if (valid) {
+                return names.map((drawer, i) => ({ drawer, target: targets[i] }));
             }
         }
+        return null;
+    }
 
-        if (assignedTarget === null) {
-            assignedTarget = availableTargetsPool.find((t) => t !== drawer) || drawer;
+    // Awaryjna ścieżka: losowo uporządkowany backtracking, który gwarantuje
+    // znalezienie poprawnego przydziału, jeśli taki w ogóle istnieje.
+    function backtrackAssignments() {
+        const usedTargets = new Set();
+        const result = new Array(names.length);
+        let steps = 0;
+
+        function solve(i) {
+            steps++;
+            if (steps > MAX_BACKTRACK_STEPS) return false;
+            if (i === names.length) return true;
+
+            const drawer = names[i];
+            const candidates = shuffle(names.filter((t) => !usedTargets.has(t)));
+
+            for (const target of candidates) {
+                if (target !== drawer && !isRestrictedPair(drawer, target)) {
+                    usedTargets.add(target);
+                    result[i] = { drawer, target };
+                    if (solve(i + 1)) return true;
+                    usedTargets.delete(target);
+                    result[i] = null;
+                }
+            }
+            return false;
         }
 
-        const idx = availableTargetsPool.indexOf(assignedTarget);
-        if (idx !== -1) availableTargetsPool.splice(idx, 1);
-        finalPairs.push({ drawer, target: assignedTarget, letter });
-        return assignedTarget;
+        return solve(0) ? result : null;
+    }
+
+    function generateAssignments() {
+        if (names.length < 2) return null;
+        return tryRandomAssignments() || backtrackAssignments();
+    }
+
+    function generateLetters() {
+        const availableLetters = shuffle([...ALL_LETTERS].filter((c) => !excludedLetters.has(c)));
+        const fallbackPool = availableLetters.length > 0 ? availableLetters : [...ALL_LETTERS];
+
+        return names.map((_, i) => {
+            if (i < availableLetters.length) {
+                return availableLetters[i];
+            }
+            return fallbackPool[Math.floor(Math.random() * fallbackPool.length)];
+        });
+    }
+
+    // Liczy cały przydział (pary + litery) dla rundy na raz — losowanie
+    // turowe w UI tylko odsłania gotowy wynik po kolei.
+    function beginRound() {
+        const assignments = generateAssignments();
+        if (!assignments) {
+            return {
+                ok: false,
+                error: 'Nie udało się znaleźć przydziału spełniającego wszystkie ograniczenia. Usuń część ograniczeń lub dodaj więcej uczestników.',
+            };
+        }
+
+        const letters = generateLetters();
+
+        currentTurnIndex = 0;
+        playerResults = [];
+        finalPairs = [];
+        roundAssignments = new Map(assignments.map((a) => [a.drawer, a.target]));
+        roundLetters = new Map(names.map((name, i) => [name, letters[i]]));
+
+        return { ok: true };
     }
 
     function rollForCurrentPlayer() {
         const drawer = names[currentTurnIndex];
-        const letter = getRandomLetter();
-        const target = assignTargetForOnRoll(drawer, letter);
+        const letter = roundLetters.get(drawer);
+        const target = roundAssignments.get(drawer);
+
         playerResults.push({ name: drawer, letter });
+        finalPairs.push({ drawer, target, letter });
+
         return { drawer, letter, target };
     }
 
@@ -205,8 +236,7 @@ Randomizer.State = (function () {
         removeRestriction,
         isRestrictedPair,
         startGame,
-        getRandomLetter,
-        assignTargetForOnRoll,
+        beginRound,
         rollForCurrentPlayer,
         advanceTurn,
         isRollingComplete,

@@ -34,6 +34,13 @@ Randomizer.RollingUI = (function () {
     }
 
     function handleBegin() {
+        const result = Randomizer.State.beginRound();
+
+        if (!result.ok) {
+            Randomizer.Toast.show(result.error, 'error');
+            return;
+        }
+
         els.beginBtn.disabled = true;
         showModalForCurrentTurn();
     }
