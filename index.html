@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Randomizer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+
+    <nav class="sidebar">
+        <div class="sidebar-title">Randomizer</div>
+        <button class="nav-btn active" data-section="names">Nazwy Uczestników</button>
+        <button class="nav-btn" data-section="restrictions">Ograniczenia Par</button>
+        <button class="nav-btn" data-section="rolling">Losowanie Liter</button>
+        <button class="nav-btn" data-section="results">Wyniki Finalne</button>
+    </nav>
+
+    <main class="content">
+
+        <section id="names" class="card section active">
+            <h2>Nazwy Uczestników</h2>
+            <label class="field-label" for="nameList">Wprowadź nazwy oddzielone przecinkami lub w nowych liniach</label>
+            <textarea id="nameList" rows="5" placeholder="np. Ala, Bartek, Celina..."></textarea>
+            <label class="field-label excluded-label" for="excludedLetters">Wykluczone litery (np. A,B,C lub ABCD) - te litery nie będą losowane</label>
+            <textarea id="excludedLetters" rows="2" placeholder="np. Q, X, Z"></textarea>
+            <div class="btn-row">
+                <button id="loadNamesBtn" class="btn btn-primary">Załaduj Nazwy</button>
+            </div>
+            <h3 class="sub-title">Załadowani uczestnicy</h3>
+            <div id="nameDisplay" class="chip-list"></div>
+        </section>
+
+        <section id="restrictions" class="card section">
+            <h2>Ograniczenia Par</h2>
+            <p>Dodaj pary, które NIE powinny być dopasowane razem:</p>
+            <div class="restriction-controls">
+                <label>Osoba 1
+                    <select id="person1Select"></select>
+                </label>
+                <span class="x-mark">X</span>
+                <label>Osoba 2
+                    <select id="person2Select"></select>
+                </label>
+                <button id="addRestrictionBtn" class="btn btn-secondary">Dodaj Ograniczenie</button>
+            </div>
+            <h3 class="sub-title">Aktualne ograniczenia (kliknij, aby usunąć)</h3>
+            <ul id="restrictionsList" class="restrictions-list"></ul>
+        </section>
+
+        <section id="rolling" class="card section">
+            <h2>Losowanie Liter</h2>
+            <div class="status-card">
+                <p id="gameStatus" class="game-status">Załaduj nazwy aby rozpocząć grę</p>
+                <p id="currentTurn" class="current-turn"></p>
+                <button id="beginRollingBtn" class="btn btn-accent" disabled>Rozpocznij Losowanie</button>
+            </div>
+        </section>
+
+        <section id="results" class="card section">
+            <h2>Wyniki Finalne</h2>
+            <div id="pairResults" class="pair-results">
+                <p class="hint">Ukończ losowanie, aby zobaczyć finalne przydziały.</p>
+            </div>
+            <div class="btn-row">
+                <button id="downloadResultsBtn" class="btn btn-secondary" disabled>Pobierz Wyniki (TXT)</button>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<div id="rollingModal" class="modal-overlay">
+    <div class="modal">
+        <h2 id="modalPlayerName">Gracz - Twoja Kolej!</h2>
+        <p id="modalTurnInfo" class="turn-info"></p>
+        <p id="modalInstructions" class="instructions"></p>
+        <button id="modalRollBtn" class="btn btn-accent modal-roll-btn">Losuj!</button>
+        <div id="modalResult" class="modal-result"></div>
+        <button id="modalNextBtn" class="btn btn-secondary modal-next-btn" disabled>Następny Gracz</button>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
