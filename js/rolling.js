@@ -13,66 +13,115 @@ Randomizer.RollingUI = (function () {
     let els = {};
     let onComplete = () => {};
     let personRepeats = 8;
+    // idle -> ready -> revealed -> ready -> ... -> done
+    let phase = 'idle';
 
     function init(options) {
         onComplete = (options && options.onComplete) || onComplete;
 
-        els.status = document.getElementById('gameStatus');
-        els.currentTurn = document.getElementById('currentTurn');
-        els.beginBtn = document.getElementById('beginRollingBtn');
-        els.progressTracker = document.getElementById('progressTracker');
-
-        els.modal = document.getElementById('rollingModal');
         els.cabinet = document.getElementById('slotCabinet');
+        els.turnHeading = document.getElementById('turnHeading');
+        els.turnInfo = document.getElementById('turnInfo');
+        els.turnMessage = document.getElementById('turnMessage');
+        els.progressTracker = document.getElementById('progressTracker');
         els.lever = document.getElementById('slotLever');
-        els.modalPlayerName = document.getElementById('modalPlayerName');
-        els.modalTurnInfo = document.getElementById('modalTurnInfo');
-        els.modalInstructions = document.getElementById('modalInstructions');
-        els.modalRollBtn = document.getElementById('modalRollBtn');
-        els.modalResult = document.getElementById('modalResult');
-        els.modalNextBtn = document.getElementById('modalNextBtn');
         els.letterStrip = document.getElementById('letterReelStrip');
         els.personStrip = document.getElementById('personReelStrip');
+        els.actionBtn = document.getElementById('rollActionBtn');
+        els.nextBtn = document.getElementById('nextTurnBtn');
+        els.ticket = document.getElementById('resultTicket');
 
-        els.beginBtn.addEventListener('click', handleBegin);
-        els.modalRollBtn.addEventListener('click', handleRoll);
-        els.modalNextBtn.addEventListener('click', handleNext);
+        els.actionBtn.addEventListener('click', handleAction);
+        els.nextBtn.addEventListener('click', handleNext);
 
         render();
     }
 
-    function handleBegin() {
-        const result = Randomizer.State.beginRound();
+    // Wywoływane też z zewnątrz (main.js) po każdej zmianie listy uczestników -
+    // zawsze wraca do stanu "idle", tak jak State.startGame() resetuje rundę.
+    function render() {
+        const names = Randomizer.State.getNames();
+        phase = 'idle';
 
-        if (!result.ok) {
-            Randomizer.Toast.show(result.error, 'error');
+        els.nextBtn.hidden = true;
+        els.actionBtn.hidden = false;
+        els.ticket.classList.remove('visible');
+        els.ticket.textContent = '';
+        els.cabinet.classList.remove('win-flash');
+
+        if (names.length < 2) {
+            els.turnHeading.textContent = 'Załaduj nazwy aby rozpocząć grę';
+            els.turnInfo.textContent = '';
+            els.turnMessage.textContent = '';
+            els.actionBtn.disabled = true;
+            els.actionBtn.textContent = '🎰 Rozpocznij Losowanie';
+            els.progressTracker.innerHTML = '';
+            resetIdleReels();
             return;
         }
 
-        els.beginBtn.disabled = true;
-        showModalForCurrentTurn();
+        els.turnHeading.textContent = 'Gotowy do rozpoczęcia losowania';
+        els.turnInfo.textContent = `${names.length} graczy łącznie`;
+        els.turnMessage.textContent = "Kliknij przycisk poniżej, aby rozpocząć losowanie kolejnych tur";
+        els.actionBtn.disabled = false;
+        els.actionBtn.textContent = '🎰 Rozpocznij Losowanie';
+        resetIdleReels();
+        renderProgressTracker();
     }
 
-    function showModalForCurrentTurn() {
+    function resetIdleReels() {
+        const names = Randomizer.State.getNames();
+        const personSymbols = names.length > 0 ? names : ['?'];
+        const repeats = Math.max(8, Math.ceil(MIN_PERSON_ITEMS / personSymbols.length));
+
+        buildReel(els.letterStrip, ALL_LETTERS, LETTER_REPEATS);
+        buildReel(els.personStrip, personSymbols, repeats);
+        resetReel(els.letterStrip);
+        resetReel(els.personStrip);
+    }
+
+    function handleAction() {
+        if (phase === 'idle') {
+            const result = Randomizer.State.beginRound();
+
+            if (!result.ok) {
+                Randomizer.Toast.show(result.error, 'error');
+                return;
+            }
+
+            phase = 'ready';
+            prepareCurrentTurn();
+            return;
+        }
+
+        if (phase === 'ready') {
+            spinCurrentTurn();
+        }
+    }
+
+    function prepareCurrentTurn() {
         const names = Randomizer.State.getNames();
         const turnIndex = Randomizer.State.getCurrentTurnIndex();
 
         if (turnIndex >= names.length) {
-            render();
+            finishRound();
             return;
         }
 
         const player = names[turnIndex];
 
-        els.modalPlayerName.textContent = `${player} - Twoja Kolej!`;
-        els.modalTurnInfo.textContent = `Tura ${turnIndex + 1} z ${names.length}`;
-        els.modalInstructions.textContent = `${player}, kliknij przycisk poniżej, aby zakręcić bębnami i wylosować literę oraz osobę!`;
-        els.modalResult.classList.remove('visible');
-        els.modalResult.textContent = '';
+        els.turnHeading.textContent = `${player} - Twoja Kolej!`;
+        els.turnInfo.textContent = `Tura ${turnIndex + 1} z ${names.length}`;
+        els.turnMessage.textContent = `${player}, kliknij przycisk poniżej, aby zakręcić bębnami i wylosować literę oraz osobę!`;
+
+        els.ticket.classList.remove('visible');
+        els.ticket.textContent = '';
         els.cabinet.classList.remove('win-flash');
-        els.modalRollBtn.disabled = false;
-        els.modalRollBtn.textContent = '🎰 Losuj!';
-        els.modalNextBtn.disabled = true;
+
+        els.actionBtn.hidden = false;
+        els.actionBtn.disabled = false;
+        els.actionBtn.textContent = '🎰 Losuj!';
+        els.nextBtn.hidden = true;
 
         personRepeats = Math.max(8, Math.ceil(MIN_PERSON_ITEMS / names.length));
         buildReel(els.letterStrip, ALL_LETTERS, LETTER_REPEATS);
@@ -80,7 +129,6 @@ Randomizer.RollingUI = (function () {
         resetReel(els.letterStrip);
         resetReel(els.personStrip);
 
-        els.modal.classList.add('open');
         renderProgressTracker();
     }
 
@@ -132,8 +180,8 @@ Randomizer.RollingUI = (function () {
         els.lever.classList.add('pulled');
     }
 
-    function handleRoll() {
-        els.modalRollBtn.disabled = true;
+    function spinCurrentTurn() {
+        els.actionBtn.disabled = true;
         pullLever();
 
         const result = Randomizer.State.rollForCurrentPlayer();
@@ -144,28 +192,42 @@ Randomizer.RollingUI = (function () {
 
         Promise.all([letterSpin, personSpin]).then(() => {
             showResult(result);
-            els.modalRollBtn.textContent = 'Zakończ';
-            els.modalNextBtn.disabled = false;
         });
     }
 
     function showResult(result) {
-        els.modalResult.textContent = `🎉 ${result.drawer}: litera ${result.letter} → wylosowana osoba: ${result.target || '(brak)'}`;
-        els.modalResult.classList.add('visible');
+        els.ticket.textContent = `🎉 ${result.drawer}: litera ${result.letter} → wylosowana osoba: ${result.target || '(brak)'}`;
+        els.ticket.classList.add('visible');
         els.cabinet.classList.add('win-flash');
+
+        phase = 'revealed';
+        els.actionBtn.hidden = true;
+        els.nextBtn.hidden = false;
+        els.nextBtn.disabled = false;
     }
 
     function handleNext() {
-        els.modal.classList.remove('open');
         const turnIndex = Randomizer.State.advanceTurn();
         const names = Randomizer.State.getNames();
 
         if (turnIndex < names.length) {
-            showModalForCurrentTurn();
+            phase = 'ready';
+            prepareCurrentTurn();
         } else {
-            render();
-            onComplete();
+            finishRound();
         }
+    }
+
+    function finishRound() {
+        phase = 'done';
+        els.turnHeading.textContent = 'Wszyscy gracze wylosowali!';
+        els.turnInfo.textContent = '';
+        els.turnMessage.textContent = '';
+        els.actionBtn.hidden = true;
+        els.nextBtn.hidden = true;
+        els.cabinet.classList.remove('win-flash');
+        renderProgressTracker();
+        onComplete();
     }
 
     function renderProgressTracker() {
@@ -184,31 +246,6 @@ Randomizer.RollingUI = (function () {
             item.textContent = name;
             els.progressTracker.appendChild(item);
         });
-    }
-
-    function render() {
-        const names = Randomizer.State.getNames();
-        const turnIndex = Randomizer.State.getCurrentTurnIndex();
-
-        if (names.length < 2) {
-            els.status.textContent = 'Załaduj nazwy aby rozpocząć grę';
-            els.currentTurn.textContent = '';
-            els.beginBtn.disabled = true;
-            els.progressTracker.innerHTML = '';
-            return;
-        }
-
-        if (turnIndex < names.length) {
-            els.status.textContent = `Gotowy do rozpoczęcia losowania - ${names.length} graczy łącznie`;
-            els.currentTurn.textContent = "Kliknij 'Rozpocznij Losowanie' aby rozpocząć losowanie kolejnych tur";
-            els.beginBtn.disabled = false;
-        } else {
-            els.status.textContent = 'Wszyscy gracze wylosowali!';
-            els.currentTurn.textContent = '';
-            els.beginBtn.disabled = true;
-        }
-
-        renderProgressTracker();
     }
 
     return { init, render };

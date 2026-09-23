@@ -14,105 +14,111 @@
 
     <nav class="sidebar">
         <div class="sidebar-title">Randomizer</div>
-        <button class="nav-btn active" data-section="names">Nazwy Uczestników</button>
-        <button class="nav-btn" data-section="restrictions">Ograniczenia Par</button>
-        <button class="nav-btn" data-section="rolling">Losowanie Liter</button>
-        <button class="nav-btn" data-section="results">Wyniki Finalne</button>
+        <button class="nav-btn active" data-section="settings">Ustawienia</button>
+        <button class="nav-btn" data-section="rolling">Losowanie</button>
     </nav>
 
     <main class="content">
 
-        <section id="names" class="card section active">
-            <h2>Nazwy Uczestników</h2>
-            <label class="field-label" for="nameList">Wprowadź nazwy oddzielone przecinkami lub w nowych liniach</label>
-            <textarea id="nameList" rows="5" placeholder="np. Ala, Bartek, Celina..."></textarea>
-            <label class="field-label excluded-label" for="excludedLetters">Wykluczone litery (np. A,B,C lub ABCD) - te litery nie będą losowane</label>
-            <textarea id="excludedLetters" rows="2" placeholder="np. Q, X, Z"></textarea>
-            <div class="btn-row">
-                <button id="loadNamesBtn" class="btn btn-primary">Załaduj Nazwy</button>
-                <button id="clearAllBtn" class="btn btn-outline" type="button">Wyczyść Wszystko</button>
+        <section id="settings" class="card section active">
+            <h2>Ustawienia</h2>
+
+            <div class="subsection">
+                <h3 class="subsection-title">Uczestnicy</h3>
+                <label class="field-label" for="nameList">Wprowadź nazwy oddzielone przecinkami lub w nowych liniach</label>
+                <textarea id="nameList" rows="5" placeholder="np. Ala, Bartek, Celina..."></textarea>
+                <label class="field-label excluded-label" for="excludedLetters">Wykluczone litery (np. A,B,C lub ABCD) - te litery nie będą losowane</label>
+                <textarea id="excludedLetters" rows="2" placeholder="np. Q, X, Z"></textarea>
+                <div class="btn-row">
+                    <button id="loadNamesBtn" class="btn btn-primary">Załaduj Nazwy</button>
+                    <button id="clearAllBtn" class="btn btn-outline" type="button">Wyczyść Wszystko</button>
+                </div>
+                <h4 class="sub-title">Załadowani uczestnicy</h4>
+                <div id="nameDisplay" class="chip-list"></div>
             </div>
-            <h3 class="sub-title">Załadowani uczestnicy</h3>
-            <div id="nameDisplay" class="chip-list"></div>
+
+            <div class="subsection">
+                <h3 class="subsection-title">Ograniczenia Par</h3>
+                <p>Dodaj pary, które NIE powinny być dopasowane razem:</p>
+                <div class="restriction-controls">
+                    <label>Osoba 1
+                        <select id="person1Select"></select>
+                    </label>
+                    <span class="x-mark">X</span>
+                    <label>Osoba 2
+                        <select id="person2Select"></select>
+                    </label>
+                    <button id="addRestrictionBtn" class="btn btn-secondary">Dodaj Ograniczenie</button>
+                </div>
+                <h4 class="sub-title">Aktualne ograniczenia (kliknij, aby usunąć)</h4>
+                <ul id="restrictionsList" class="restrictions-list"></ul>
+            </div>
         </section>
 
-        <section id="restrictions" class="card section">
-            <h2>Ograniczenia Par</h2>
-            <p>Dodaj pary, które NIE powinny być dopasowane razem:</p>
-            <div class="restriction-controls">
-                <label>Osoba 1
-                    <select id="person1Select"></select>
-                </label>
-                <span class="x-mark">X</span>
-                <label>Osoba 2
-                    <select id="person2Select"></select>
-                </label>
-                <button id="addRestrictionBtn" class="btn btn-secondary">Dodaj Ograniczenie</button>
-            </div>
-            <h3 class="sub-title">Aktualne ograniczenia (kliknij, aby usunąć)</h3>
-            <ul id="restrictionsList" class="restrictions-list"></ul>
-        </section>
+        <section id="rolling" class="section">
 
-        <section id="rolling" class="card section">
-            <h2>Losowanie Liter</h2>
-            <div class="status-card">
-                <p id="gameStatus" class="game-status">Załaduj nazwy aby rozpocząć grę</p>
-                <p id="currentTurn" class="current-turn"></p>
+            <div id="slotCabinet" class="card slot-cabinet">
+                <span class="cabinet-rivet rivet-tl" aria-hidden="true"></span>
+                <span class="cabinet-rivet rivet-tr" aria-hidden="true"></span>
+                <span class="cabinet-rivet rivet-bl" aria-hidden="true"></span>
+                <span class="cabinet-rivet rivet-br" aria-hidden="true"></span>
+
+                <div class="cabinet-lights" aria-hidden="true">
+                    <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                </div>
+
+                <div class="cabinet-marquee">🎰 RANDOMIZER 🎰</div>
+
+                <h2 id="turnHeading">Załaduj nazwy aby rozpocząć grę</h2>
+                <p id="turnInfo" class="turn-info"></p>
+                <p id="turnMessage" class="instructions"></p>
+
                 <div id="progressTracker" class="progress-tracker"></div>
-                <button id="beginRollingBtn" class="btn btn-accent" disabled>Rozpocznij Losowanie</button>
-            </div>
-        </section>
 
-        <section id="results" class="card section">
-            <h2>Wyniki Finalne</h2>
-            <div id="pairResults" class="pair-results">
-                <p class="hint">Ukończ losowanie, aby zobaczyć finalne przydziały.</p>
+                <div class="slot-body">
+                    <div class="slot-reels">
+                        <div class="reel-window reel-window-letter">
+                            <div class="reel-strip" id="letterReelStrip"></div>
+                            <div class="reel-shade reel-shade-top"></div>
+                            <div class="reel-shade reel-shade-bottom"></div>
+                            <div class="reel-highlight"></div>
+                        </div>
+                        <div class="reel-window reel-window-person">
+                            <div class="reel-strip" id="personReelStrip"></div>
+                            <div class="reel-shade reel-shade-top"></div>
+                            <div class="reel-shade reel-shade-bottom"></div>
+                            <div class="reel-highlight"></div>
+                        </div>
+                    </div>
+                    <div class="slot-lever" id="slotLever" aria-hidden="true">
+                        <div class="lever-track"></div>
+                        <div class="lever-arm"><div class="lever-ball"></div></div>
+                    </div>
+                </div>
+
+                <button id="rollActionBtn" class="btn btn-accent slot-fire-btn" disabled>🎰 Rozpocznij Losowanie</button>
+                <button id="nextTurnBtn" class="btn btn-secondary next-btn" hidden>Następny Gracz</button>
+
+                <div id="resultTicket" class="ticket" aria-live="polite"></div>
+
+                <div class="cabinet-lights cabinet-lights-bottom" aria-hidden="true">
+                    <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                </div>
             </div>
-            <div class="btn-row">
-                <button id="downloadResultsBtn" class="btn btn-secondary" disabled>Pobierz Wyniki (TXT)</button>
+
+            <div class="card results-block">
+                <h2>Wyniki Finalne</h2>
+                <div id="pairResults" class="pair-results">
+                    <p class="hint">Ukończ losowanie, aby zobaczyć finalne przydziały.</p>
+                </div>
+                <div class="btn-row">
+                    <button id="downloadResultsBtn" class="btn btn-secondary" disabled>Pobierz Wyniki (TXT)</button>
+                </div>
             </div>
+
         </section>
 
     </main>
-</div>
-
-<div id="rollingModal" class="modal-overlay">
-    <div id="slotCabinet" class="modal slot-cabinet">
-        <div class="cabinet-lights" aria-hidden="true">
-            <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
-        </div>
-
-        <h2 id="modalPlayerName">Gracz - Twoja Kolej!</h2>
-        <p id="modalTurnInfo" class="turn-info"></p>
-        <p id="modalInstructions" class="instructions"></p>
-
-        <div class="slot-body">
-            <div class="slot-reels">
-                <div class="reel-window reel-window-letter">
-                    <div class="reel-strip" id="letterReelStrip"></div>
-                    <div class="reel-shade reel-shade-top"></div>
-                    <div class="reel-shade reel-shade-bottom"></div>
-                    <div class="reel-highlight"></div>
-                </div>
-                <div class="reel-window reel-window-person">
-                    <div class="reel-strip" id="personReelStrip"></div>
-                    <div class="reel-shade reel-shade-top"></div>
-                    <div class="reel-shade reel-shade-bottom"></div>
-                    <div class="reel-highlight"></div>
-                </div>
-            </div>
-            <div class="slot-lever" id="slotLever" aria-hidden="true">
-                <div class="lever-track"></div>
-                <div class="lever-arm"><div class="lever-ball"></div></div>
-            </div>
-        </div>
-
-        <button id="modalRollBtn" class="btn btn-accent modal-roll-btn">🎰 Losuj!</button>
-
-        <div id="modalResult" class="ticket" aria-live="polite"></div>
-
-        <button id="modalNextBtn" class="btn btn-secondary modal-next-btn" disabled>Następny Gracz</button>
-    </div>
 </div>
 
 <div id="toastContainer" class="toast-container" aria-live="polite"></div>
