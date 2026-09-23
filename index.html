@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Randomizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Monoton&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -74,12 +77,40 @@
 </div>
 
 <div id="rollingModal" class="modal-overlay">
-    <div class="modal">
+    <div id="slotCabinet" class="modal slot-cabinet">
+        <div class="cabinet-lights" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+
         <h2 id="modalPlayerName">Gracz - Twoja Kolej!</h2>
         <p id="modalTurnInfo" class="turn-info"></p>
         <p id="modalInstructions" class="instructions"></p>
-        <button id="modalRollBtn" class="btn btn-accent modal-roll-btn">Losuj!</button>
-        <div id="modalResult" class="modal-result"></div>
+
+        <div class="slot-body">
+            <div class="slot-reels">
+                <div class="reel-window reel-window-letter">
+                    <div class="reel-strip" id="letterReelStrip"></div>
+                    <div class="reel-shade reel-shade-top"></div>
+                    <div class="reel-shade reel-shade-bottom"></div>
+                    <div class="reel-highlight"></div>
+                </div>
+                <div class="reel-window reel-window-person">
+                    <div class="reel-strip" id="personReelStrip"></div>
+                    <div class="reel-shade reel-shade-top"></div>
+                    <div class="reel-shade reel-shade-bottom"></div>
+                    <div class="reel-highlight"></div>
+                </div>
+            </div>
+            <div class="slot-lever" id="slotLever" aria-hidden="true">
+                <div class="lever-track"></div>
+                <div class="lever-arm"><div class="lever-ball"></div></div>
+            </div>
+        </div>
+
+        <button id="modalRollBtn" class="btn btn-accent modal-roll-btn">🎰 Losuj!</button>
+
+        <div id="modalResult" class="ticket" aria-live="polite"></div>
+
         <button id="modalNextBtn" class="btn btn-secondary modal-next-btn" disabled>Następny Gracz</button>
     </div>
 </div>
