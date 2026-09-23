@@ -27,6 +27,7 @@
             <textarea id="excludedLetters" rows="2" placeholder="np. Q, X, Z"></textarea>
             <div class="btn-row">
                 <button id="loadNamesBtn" class="btn btn-primary">Załaduj Nazwy</button>
+                <button id="clearAllBtn" class="btn btn-outline" type="button">Wyczyść Wszystko</button>
             </div>
             <h3 class="sub-title">Załadowani uczestnicy</h3>
             <div id="nameDisplay" class="chip-list"></div>
@@ -54,6 +55,7 @@
             <div class="status-card">
                 <p id="gameStatus" class="game-status">Załaduj nazwy aby rozpocząć grę</p>
                 <p id="currentTurn" class="current-turn"></p>
+                <div id="progressTracker" class="progress-tracker"></div>
                 <button id="beginRollingBtn" class="btn btn-accent" disabled>Rozpocznij Losowanie</button>
             </div>
         </section>
@@ -82,6 +84,14 @@
     </div>
 </div>
 
-<script src="script.js"></script>
+<div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+<script src="js/state.js"></script>
+<script src="js/toast.js"></script>
+<script src="js/names.js"></script>
+<script src="js/restrictions.js"></script>
+<script src="js/rolling.js"></script>
+<script src="js/results.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>
